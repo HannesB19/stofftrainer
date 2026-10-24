@@ -42,11 +42,26 @@ const LANGS = {
     defSkip: /^(This|That|There|It|Here)$/i,
     tList: (lead, n) => cap(lead) + " – name all " + n + ".",
     tGap: "Fill in the blank: ", tGapMC: "Which word fits the blank? ",
+  },
+  ml: {  // Malayalam: keine Groß-/Kleinschreibung, keine Stoppwortliste – generische Regeln
+    stop: "",
+    abbr: /\b(etc|e\.\s?g|i\.\s?e)\.$/,
+    loes: /^(?:ഉത്തരം|ശരിയുത്തരം|ശരിയായ ഉത്തരം|Answer|Solution|Correct)\s*[:\-–]?\s*([a-fA-F1-6](?:\s*[,\/]+\s*[a-fA-F1-6])*)\s*\.?$/,
+    markOk: /(✓|✔|☑|■|●|\[[xX]\]|\([xX]\)|\*\s*$|\s\(ശരി\)\s*$)/,
+    qline: /^(?:(?:ചോദ്യം|Question|Q)\s*)?(?:\d{1,3}\s*[\.\):]\s*)?(.+[?？])\s*$/,
+    ansPrefix: /^(?:ഉത്തരം|Answer)\s*[:\-–]\s*/,
+    verbs: /^$/,
+    units: "m|cm|mm|km|kg|g|l|ml|%|മീറ്റർ|കിലോമീറ്റർ|കിലോ|വർഷം|വർഷങ്ങൾ|മാസം|ദിവസം|മണിക്കൂർ|മിനിറ്റ്|സെക്കൻഡ്|ശതമാനം",
+    headStart: /^[\p{L}\d]/u, sentStart: /(?<=[.!?।])\s+(?=[\p{L}\d„"(])/u,
+    isTerm: (w, i) => i > 0 && w.length >= 4,
+    def: [], defSkip: /^$/,
+    tList: (lead, n) => lead + " – എല്ലാ " + n + " എണ്ണവും പറയുക.",
+    tGap: "വിട്ടഭാഗം പൂരിപ്പിക്കുക: ", tGapMC: "വിട്ടഭാഗത്ത് ഏത് വാക്ക് ചേരും? ",
   }
 };
-const norm = s => String(s||"").toLowerCase().replace(/[^a-z0-9äöüß]+/g," ").trim();
+const norm = s => String(s||"").toLowerCase().replace(/[^\p{L}\p{M}\p{N}]+/gu," ").trim();
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-const words = s => (s.match(/[A-Za-zÄÖÜäöüß][\wäöüßÄÖÜ-]*/g) || []);
+const words = s => (s.match(/[\p{L}\p{M}][\p{L}\p{M}\p{N}-]*/gu) || []);
 const OPT = /^(?:[\(\[]?([a-fA-F])[\)\.\]:]|\(?([1-6])\)|[☐☑□■○●◯•▪\-–]|\[[ xX]\]|\([xX ]\))\s*(.+)$/;
 function shuffle(a){ for (let i = a.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; }
 
@@ -63,7 +78,7 @@ function erzeugen(text, opt){
   const C = LANGS[opt.lang] || LANGS.de;
   const STOP = new Set(C.stop.split(" "));
   const NUM = new RegExp("(?:^|\\s)(\\d+(?:[.,]\\d+)?)\\s?(" + C.units + ")?(?=[\\s.,;:)]|$)", "g");
-  const isHeading = l => l.length >= 3 && !/:/.test(l) && !C.loes.test(l) && l.length <= 70 && !/[.!?:,;]$/.test(l) && /^[\dA-ZÄÖÜ§]/.test(l) && words(l).length <= 9 && !OPT.test(l) && !/\?$/.test(l) && !C.verbs.test(l);
+  const isHeading = l => l.length >= 3 && !/:/.test(l) && !C.loes.test(l) && l.length <= 70 && !/[.!?:,;]$/.test(l) && (C.headStart || /^[\dA-ZÄÖÜ§]/).test(l) && words(l).length <= 9 && !OPT.test(l) && !/\?$/.test(l) && !C.verbs.test(l);
   const lines = vorbereiten(text), used = new Set(), hinweise = [];
 
   /* 1. Vorhandene Prüfungsfragen */
@@ -110,7 +125,7 @@ function erzeugen(text, opt){
   const sz = []; thema = ""; let buf = [];
   const flush = () => { if (!buf.length) return; const para = buf.join(" "); buf = [];
     const parts = []; let cur = "";
-    for (const tok of para.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ„"(\d])/)){ cur = cur ? cur + " " + tok : tok; if (C.abbr.test(cur)) continue; parts.push(cur); cur = ""; }
+    for (const tok of para.split(C.sentStart || /(?<=[.!?])\s+(?=[A-ZÄÖÜ„"(\d])/)){ cur = cur ? cur + " " + tok : tok; if (C.abbr.test(cur)) continue; parts.push(cur); cur = ""; }
     if (cur) parts.push(cur);
     for (const s of parts){ const w = words(s).length; if (w >= 6 && w <= 40 && !/[:;]$/.test(s)) sz.push({t: thema, s: s.trim()}); } };
   for (let i = 0; i < lines.length; i++){

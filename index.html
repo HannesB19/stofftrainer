@@ -146,9 +146,9 @@ const MUT = {
     sim: pct => pct >= 90 ? "Hervorragend! Das wäre glatt bestanden." : pct >= 75 ? "Gut gemacht – das reicht zum Bestehen. Schwachstellen noch glätten." : pct >= 50 ? "Halbzeit. Fehlerliste üben und nochmal ran." : "Ein erster Lauf ist nur der Startpunkt. Dranbleiben – es wird leichter."
   }
 };
-const mut = kind => { const m = MUT[sprache()] || MUT.de; const l = m[kind]; return l[Math.floor(Math.random()*l.length)]; };
-const mutRound = (ok, n) => (MUT[sprache()] || MUT.de).round(ok, n);
-const mutSim = pct => (MUT[sprache()] || MUT.de).sim(pct);
+const mut = kind => { const m = MUT[sprache()] || MUT.en; const l = m[kind]; return l[Math.floor(Math.random()*l.length)]; };
+const mutRound = (ok, n) => (MUT[sprache()] || MUT.en).round(ok, n);
+const mutSim = pct => (MUT[sprache()] || MUT.en).sim(pct);
 
 /* ---------- SM-2 ---------- */
 function schedule(id, q){
@@ -211,7 +211,7 @@ const V = {};
 V.neu = () => app(`<h2>${Object.keys(S.stoffe).length ? "Neuer Stoff" : "Willkommen"}</h2>
   <div class="card prose"><p style="margin-top:0">Ein Stoff ist ein Thema, das du lernen willst: Fahrradprüfung, Erste Hilfe, Biologie 7, Führerschein-Theorie. Du lädst Unterlagen hoch (PDF, Fotos, Screenshots oder Text), die App liest sie aus, erzeugt Lernkarten und Fragen und fragt dich ab. Alles passiert auf diesem Gerät, ohne Internet.</p>
   <label for="nn" class="small muted">Name des Stoffs</label><input type="text" id="nn" placeholder="z. B. Fahrradprüfung 4. Klasse" maxlength="60">
-  <div class="row" style="margin-top:10px"><label for="nsp" class="small muted">Sprache des Stoffs</label><select id="nsp"><option value="de">Deutsch</option><option value="en">Englisch</option></select></div>
+  <div class="row" style="margin-top:10px"><label for="nsp" class="small muted">Sprache des Stoffs</label><select id="nsp"><option value="de">Deutsch</option><option value="en">Englisch</option><option value="ml">Malayalam</option></select></div>
   <p class="small muted">Die Sprache steuert Texterkennung und Fragenerzeugung. Die Bedienung bleibt deutsch.</p>
   <div class="row" style="margin-top:12px"><button class="btn p" onclick="neuStoff()">Anlegen</button>${Object.keys(S.stoffe).length?`<button class="btn" onclick="go('start')">Abbrechen</button>`:""}</div></div>
   <div class="card small muted"><b>Fertige Fragen vorhanden?</b> Unter Mehr → Daten lässt sich ein Fragenpaket (JSON) importieren.</div>`);
@@ -260,7 +260,7 @@ V.stoff = () => {
   <p class="small muted" style="margin-bottom:0">Erkannte Prüfungsfragen aus dem Text werden immer übernommen; die Zahlen begrenzen nur die zusätzlich erzeugten Lückentext-, Zahlen- und Definitionsfragen. Danach im Editor durchsehen.</p></div>
   <div class="card"><h3 style="margin-top:0">Quellen in diesem Stoff</h3>${s.quellen.length ? s.quellen.map(q => `<div class="src"><span>${esc(q.name)} <span class="tag">${Math.round((q.zeichen||0)/1000)} k Zeichen</span> <span class="small muted">${s.karten.filter(c=>c.src===q.id).length} Karten · ${s.mc.filter(m=>m.src===q.id).length} Fragen</span></span><span style="white-space:nowrap"><button class="btn sm" onclick="go('editor',{src:'${q.id}'})">Editor</button> <button class="btn sm" onclick="delQuelle('${q.id}')">Entfernen</button></span></div>`).join("") : '<p class="muted">Noch keine.</p>'}
   ${s.karten.length || s.mc.length ? `<div class="row" style="margin-top:10px"><button class="btn" onclick="go('editor',{})">Alle Fragen im Editor</button><button class="btn" onclick="neueFrage()">Frage von Hand anlegen</button></div>` : ""}</div>
-  <div class="card"><h3 style="margin-top:0">Stoff verwalten</h3><div class="row" style="margin-bottom:10px"><label for="ssp" class="small muted">Sprache</label><select id="ssp" onchange="stoff().sprache=this.value;save();toast('Sprache: '+(this.value==='en'?'Englisch':'Deutsch'))"><option value="de" ${sprache()==="de"?"selected":""}>Deutsch</option><option value="en" ${sprache()==="en"?"selected":""}>Englisch</option></select></div><div class="row"><button class="btn" onclick="umbenennen()">Umbenennen</button><button class="btn" onclick="exportStoff()">Als Fragenpaket exportieren</button><button class="btn danger" onclick="askDel()">Stoff löschen</button></div><div id="delc"></div></div>`);
+  <div class="card"><h3 style="margin-top:0">Stoff verwalten</h3><div class="row" style="margin-bottom:10px"><label for="ssp" class="small muted">Sprache</label><select id="ssp" onchange="stoff().sprache=this.value;save();toast('Sprache: '+({en:'Englisch',ml:'Malayalam'}[this.value]||'Deutsch'))"><option value="de" ${sprache()==="de"?"selected":""}>Deutsch</option><option value="en" ${sprache()==="en"?"selected":""}>Englisch</option><option value="ml" ${sprache()==="ml"?"selected":""}>Malayalam</option></select></div><div class="row"><button class="btn" onclick="umbenennen()">Umbenennen</button><button class="btn" onclick="exportStoff()">Als Fragenpaket exportieren</button><button class="btn danger" onclick="askDel()">Stoff löschen</button></div><div id="delc"></div></div>`);
   renderPend();
   const d = $("#drop");
   d.ondragover = e => { e.preventDefault(); d.classList.add("over"); }; d.ondragleave = () => d.classList.remove("over");
@@ -321,7 +321,7 @@ async function addPdf(f){
 let ocrWorker = null, ocrLang = "";
 async function ocr(img, onP){
   if (!window.Tesseract) throw new Error("Texterkennung nicht verfügbar");
-  const lang = sprache() === "en" ? "eng" : "deu";
+  const lang = ({en:"eng", ml:"mal+eng"})[sprache()] || "deu";
   if (ocrWorker && ocrLang !== lang){ try { await ocrWorker.terminate(); } catch(e){} ocrWorker = null; }
   if (!ocrWorker){ st("Texterkennung wird vorbereitet (einmalig je Sprache) …"); ocrLang = lang;
     ocrWorker = await Tesseract.createWorker(lang, 1, {workerPath: "worker.min.js", corePath: ".", langPath: ".", gzip: true,
@@ -533,7 +533,7 @@ V.hilfe = () => app(`<button class="btn sm" onclick="go('mehr')">← Mehr</butto
   <p><b>Fragen erzeugen.</b> Die App sucht im Text zuerst nach vorhandenen Prüfungsfragen (Frage mit Antwortmöglichkeiten a/b/c, Kästchen, Lösungsangabe) und übernimmt sie. Aus Fließtext baut sie Definitionsfragen („Was ist …?“), Aufzählungen („Nenne alle …“), Lückentexte und Zahlenfragen; falsche Antwortmöglichkeiten kommen aus demselben Text. Überschriften werden zu Themen.</p>
   <p><b>Editor.</b> Weil Regeln keinen Verstand haben, lohnt der Blick in den Editor: unpassende Fragen löschen, Texte glätten, bei Prüfungsfragen ohne Lösungsangabe die richtige Antwort ankreuzen. Fragen ohne Kreuz werden nicht abgefragt.</p>
   <p><b>Lernen.</b> Karten folgen dem SM-2-Verfahren: nach jeder Bewertung rückt die nächste Wiederholung weiter in die Zukunft, bei „Nochmal“ kommt die Karte in 10 Minuten wieder. Fragen wandern bei Fehlern in die Fehlerliste und verlassen sie nach zwei richtigen Antworten in Folge. Die Simulation mischt Fragen über alle Themen und wertet erst am Ende aus.</p>
-  <p><b>Sprache.</b> Je Stoff wählbar (Deutsch oder Englisch, beim Anlegen oder unter Stoff → Stoff verwalten). Sie bestimmt, welches Sprachpaket die Texterkennung nutzt und nach welchen Mustern Fragen gebaut werden. Die Bedienung der App bleibt deutsch.</p>
+  <p><b>Sprache.</b> Je Stoff wählbar (Deutsch, Englisch oder Malayalam, beim Anlegen oder unter Stoff → Stoff verwalten). Sie bestimmt, welches Sprachpaket die Texterkennung nutzt und nach welchen Mustern Fragen gebaut werden. Die Bedienung der App bleibt deutsch.</p>
   <p><b>Fotos.</b> Gut ausgeleuchtet, gerade, scharf, eine Seite je Foto. Die Texterkennung braucht beim ersten Mal einige Sekunden zum Vorbereiten und je Seite etwa 5–20 Sekunden.</p></div>`);
 V.stat = () => {
   const s = stoff(), l = L();
@@ -564,7 +564,7 @@ window.importPaket = f => readJson(f, j => {
   if (!j || (!Array.isArray(j.karten) && !Array.isArray(j.mc))){ toast("Kein Fragenpaket."); return; }
   const name = String(j.name || "Importiert").slice(0,60);
   let s = Object.values(S.stoffe).find(x => x.name === name);
-  if (!s){ const id = uid(); s = S.stoffe[id] = {id, name, sprache: j.sprache === "en" ? "en" : "de", erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; }
+  if (!s){ const id = uid(); s = S.stoffe[id] = {id, name, sprache: ["en","ml"].includes(j.sprache) ? j.sprache : "de", erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; }
   const src = uid(); s.quellen.push({id:src, name:"Import " + (f.name||""), zeichen:0});
   let nk = 0, nq = 0;
   for (const k of j.karten || []){ if (!k || !k.f || !k.a) continue; const id = hid("k", k.f); if (s.karten.some(x=>x.id===id)) continue; s.karten.push({id, f:String(k.f), a:String(k.a), t:String(k.t||""), art:"import", src}); nk++; }
