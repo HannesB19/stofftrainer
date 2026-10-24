@@ -1,5 +1,5 @@
 /* Stofftrainer Service Worker – alles vorab cachen, danach offline (Version wird vom Deploy-Skript hochgezählt) */
-const VERSION = "st-2";
+const VERSION = "st-3";
 const FILES = ["./", "./index.html", "./gen.js", "./manifest.webmanifest",
   "./pdf.min.js", "./pdf.worker.min.js", "./tesseract.min.js", "./worker.min.js",
   "./tesseract-core-simd-lstm.wasm.js", "./tesseract-core-lstm.wasm.js",

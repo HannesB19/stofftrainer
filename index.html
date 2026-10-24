@@ -127,6 +127,29 @@ function logToday(k){ const l = L(), d = new Date().toISOString().slice(0,10); l
 function toast(msg){ let t = $("#toast"); if (!t){ t = document.createElement("div"); t.id = "toast"; t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:20;max-width:90vw;font-size:.92rem"; document.body.appendChild(t); }
   t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 4000); }
 
+/* ---------- Mutmachsprüche (folgen der Stoffsprache) ---------- */
+const MUT = {
+  en: {
+    ok: ["Nice one!", "Spot on!", "You've got this.", "Brilliant – keep going!", "Correct. Your brain is on fire today.", "Yes! That's how it's done.", "Well done, that one's locked in.", "Great memory!", "Boom. Next!", "Exactly right."],
+    bad: ["Not this time – and that's how learning works.", "Close. You'll get it next time.", "Mistakes are just practice in disguise.", "No worries, this one goes on the list and comes back.", "Every expert was once wrong about this.", "Keep going – the second try usually sticks.", "That's a tricky one. Now you know.", "Wrong answer, right attitude: you're still here."],
+    card: ["Good job rating honestly – that's the secret.", "One card closer.", "Keep it up!", "Nice work.", "Steady progress beats cramming."],
+    done: ["That's it for now – well done!", "Stack cleared. Go celebrate a little.", "All done for today. Your future self says thanks.", "Finished! Rest is part of learning too."],
+    round: (ok, n) => ok === n ? "Perfect round – all " + n + " correct!" : ok >= n * .8 ? "Strong round: " + ok + " of " + n + ". Almost there!" : ok >= n * .5 ? ok + " of " + n + " – solid. The rest goes on the list." : ok + " of " + n + ". Tough round, but every attempt counts. Try the error list next.",
+    sim: pct => pct >= 90 ? "Outstanding! You'd pass with flying colours." : pct >= 75 ? "Well done – that's a pass. Polish the weak spots." : pct >= 50 ? "Halfway there. Practise the error list and try again." : "A first run is just a starting point. Keep going – it gets easier."
+  },
+  de: {
+    ok: ["Stark!", "Genau richtig!", "Das sitzt.", "Super – weiter so!", "Richtig. Heute läuft's.", "Ja! So geht das.", "Sehr gut, die ist drin.", "Gutes Gedächtnis!", "Treffer. Nächste!", "Exakt."],
+    bad: ["Diesmal nicht – genau so funktioniert Lernen.", "Knapp daneben. Beim nächsten Mal klappt's.", "Fehler sind Übung in Verkleidung.", "Kein Problem, die kommt auf die Liste und wieder dran.", "Jeder Profi hat das mal falsch gehabt.", "Dranbleiben – der zweite Versuch sitzt meistens.", "Eine knifflige Frage. Jetzt weißt du es.", "Falsche Antwort, richtige Einstellung: du bist noch da."],
+    card: ["Ehrlich bewertet – das ist das Geheimnis.", "Eine Karte weiter.", "Weiter so!", "Gut gemacht.", "Stetig schlägt Hauruck."],
+    done: ["Das war's für jetzt – gut gemacht!", "Stapel leer. Kurz feiern.", "Für heute geschafft. Dein zukünftiges Ich sagt danke.", "Fertig! Pause gehört auch zum Lernen."],
+    round: (ok, n) => ok === n ? "Perfekte Runde – alle " + n + " richtig!" : ok >= n * .8 ? "Starke Runde: " + ok + " von " + n + ". Fast geschafft!" : ok >= n * .5 ? ok + " von " + n + " – solide. Der Rest kommt auf die Liste." : ok + " von " + n + ". Harte Runde, aber jeder Versuch zählt. Nimm als Nächstes die Fehlerliste.",
+    sim: pct => pct >= 90 ? "Hervorragend! Das wäre glatt bestanden." : pct >= 75 ? "Gut gemacht – das reicht zum Bestehen. Schwachstellen noch glätten." : pct >= 50 ? "Halbzeit. Fehlerliste üben und nochmal ran." : "Ein erster Lauf ist nur der Startpunkt. Dranbleiben – es wird leichter."
+  }
+};
+const mut = kind => { const m = MUT[sprache()] || MUT.de; const l = m[kind]; return l[Math.floor(Math.random()*l.length)]; };
+const mutRound = (ok, n) => (MUT[sprache()] || MUT.de).round(ok, n);
+const mutSim = pct => (MUT[sprache()] || MUT.de).sim(pct);
+
 /* ---------- SM-2 ---------- */
 function schedule(id, q){
   const l = L(); const c = l.cards[id] || {ef:2.5, iv:0, reps:0, lapses:0};
@@ -377,7 +400,7 @@ function buildQueue(o){
 V.lernen = o => { deckOpts = o || {}; queue = buildQueue(deckOpts); nextCard(); };
 function nextCard(){
   const s = stoff(), l = L();
-  if (!queue.length){ app(`<div class="card"><h2>Für jetzt erledigt</h2><p>Keine fälligen Karten ${deckOpts.t ? "in diesem Thema " : ""}mehr. Morgen geht es weiter.</p>
+  if (!queue.length){ app(`<div class="card"><h2>Für jetzt erledigt</h2><p class="muted">${esc(mut("done"))}</p><p>Keine fälligen Karten ${deckOpts.t ? "in diesem Thema " : ""}mehr. Morgen geht es weiter.</p>
     <div class="row"><button class="btn" onclick="go('karten')">Zurück</button>${s.karten.some(c => !l.cards[c.id] && (!deckOpts.t||c.t===deckOpts.t)) ? `<button class="btn" onclick="extraNeu()">10 weitere neue Karten</button>` : ""}</div></div>`); return; }
   cur = byId()[queue[0]]; if (!cur || !cur.f){ queue.shift(); return nextCard(); }
   app(`<div class="row" style="justify-content:space-between"><button class="btn sm" onclick="go('karten')">← Beenden</button><span class="small muted">noch ${queue.length}</span></div>
@@ -390,6 +413,7 @@ function nextCard(){
 }
 window.extraNeu = () => { const l = L(); queue = stoff().karten.filter(c => (!deckOpts.t || c.t === deckOpts.t) && !l.cards[c.id]).slice(0,10).map(c=>c.id); nextCard(); };
 window.rate = q => { const id = queue.shift(), l = L(); const isNew = !l.cards[id]; schedule(id, q); if (isNew){ l.cards[id].first = Date.now(); save(); }
+  if (q >= 2 && Math.random() < .3) toast(mut("card"));
   if (q === 0) queue.splice(Math.min(queue.length, 4), 0, id); nextCard(); };
 document.addEventListener("keydown", e => {
   if (view !== "lernen" || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
@@ -415,7 +439,7 @@ window.startMC = o => { mcOpts = o; const l = L(), m = byId();
   mcQ = pool.slice(0, o.fehler ? 30 : (o.n || 10)).map(q => ({q, perm: shuffle(q.o.map((_,i)=>i).filter(i => q.o[i]))})); mcI = 0; mcStats = {n:0, ok:0}; go("mc"); };
 V.mc = () => {
   if (!mcQ.length) return go("fragen");
-  if (mcI >= mcQ.length){ app(`<div class="card"><h2>Runde beendet</h2><p>${mcStats.ok} von ${mcStats.n} richtig.</p><div class="row"><button class="btn p" onclick="startMC(mcOpts)">Neue Runde</button><button class="btn" onclick="go('fragen')">Zurück</button></div></div>`); return; }
+  if (mcI >= mcQ.length){ app(`<div class="card"><h2>Runde beendet</h2><p>${mcStats.ok} von ${mcStats.n} richtig.</p><p class="muted">${esc(mutRound(mcStats.ok, mcStats.n))}</p><div class="row"><button class="btn p" onclick="startMC(mcOpts)">Neue Runde</button><button class="btn" onclick="go('fragen')">Zurück</button></div></div>`); return; }
   const {q, perm} = mcQ[mcI]; mcSel = []; const multi = q.r.length > 1;
   app(`<div class="row" style="justify-content:space-between"><button class="btn sm" onclick="go('fragen')">← Beenden</button><span class="small muted">${mcI+1} / ${mcQ.length}</span></div>
   <div class="card" style="margin-top:10px">${q.t?`<span class="tag">${esc(q.t)}</span>`:""}<div class="q">${esc(q.f)}</div>${multi?'<p class="small muted">Mehrere Antworten richtig – alle auswählen, dann prüfen.</p>':""}
@@ -433,7 +457,7 @@ window.mcCheck = () => {
   if (!ok) l.fehler[q.id] = 0; else if (q.id in l.fehler){ l.fehler[q.id]++; if (l.fehler[q.id] >= 2) delete l.fehler[q.id]; }
   mcStats.n++; if (ok) mcStats.ok++; logToday("fragen"); save();
   const st = q.id in l.fehler ? `<span class="small muted"> · Fehlerliste ${l.fehler[q.id]}/2</span>` : "";
-  $("#fb").innerHTML = `<div class="ans"><b class="${ok?"ok-t":"bad-t"}">${ok?"Richtig.":"Nicht richtig."}</b>${st}${q.e?`<div style="margin-top:6px">${esc(q.e)}</div>`:""}</div>
+  $("#fb").innerHTML = `<div class="ans"><b class="${ok?"ok-t":"bad-t"}">${ok?"Richtig.":"Nicht richtig."}</b> <span class="muted">${esc(mut(ok?"ok":"bad"))}</span>${st}${q.e?`<div style="margin-top:6px">${esc(q.e)}</div>`:""}</div>
    <button class="btn p" style="width:100%;margin-top:12px" onclick="mcI++;V.mc()">Weiter</button>`;
   const c = $("#chk"); if (c) c.remove();
 };
@@ -491,7 +515,7 @@ V.simres = r => {
   r = r || L().sims[L().sims.length-1]; const m = byId(), by = {};
   r.detail.forEach(d => { by[d.t] = by[d.t] || {n:0, ok:0}; by[d.t].n++; if (d.ok) by[d.t].ok++; });
   app(`<div class="card"><h2 style="margin-top:0">${r.ok} von ${r.n} richtig (${r.pct} %)</h2>
-  <p class="muted small">Dauer ${Math.round(r.dauer/60)} min. Falsche Antworten wurden in die Fehlerliste übernommen.</p>
+  <p>${esc(mutSim(r.pct))}</p><p class="muted small">Dauer ${Math.round(r.dauer/60)} min. Falsche Antworten wurden in die Fehlerliste übernommen.</p>
   <div class="tw"><table><tr><th>Thema</th><th class="n">richtig</th><th class="n">Quote</th></tr>${Object.entries(by).sort((a,b)=>a[1].ok/a[1].n-b[1].ok/b[1].n).map(([t,s]) => `<tr><td>${esc(t||"ohne Thema")}</td><td class="n">${s.ok}/${s.n}</td><td class="n">${Math.round(100*s.ok/s.n)} %</td></tr>`).join("")}</table></div></div>
   <h3>Durchsicht</h3>${r.detail.map((d,k) => { const q = m[d.id]; if (!q) return ""; const sel = Array.isArray(d.a) ? d.a : (d.a === null ? [] : [d.a]); return `<div class="card small"><b>${k+1}. ${esc(q.f)}</b>
    ${q.o.map((o,i) => `<div class="${q.r.includes(i)?"ok-t":sel.includes(i)?"bad-t":"muted"}">${q.r.includes(i)?"✓":sel.includes(i)?"✗":"·"} ${esc(o)}</div>`).join("")}${!sel.length?'<div class="bad-t">nicht beantwortet</div>':""}${q.e?`<div class="muted" style="margin-top:4px">${esc(q.e)}</div>`:""}</div>`; }).join("")}
