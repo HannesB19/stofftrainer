@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1f6f6b">
+<meta name="robots" content="noindex,nofollow">
+<title>Stofftrainer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<script src="pdf.min.js"></script>
+<script src="tesseract.min.js"></script>
+<script src="gen.js"></script>
+<style>
+:root{
+  --bg:#f5f4ef;--card:#ffffff;--ink:#1d2321;--muted:#5d6763;--line:#dcd9d0;
+  --accent:#1f6f6b;--accent-ink:#ffffff;--soft:#e3eeec;
+  --good:#2f7a4b;--good-bg:#e4f2e8;--bad:#a63b31;--bad-bg:#f7e5e2;--warn:#8a6a10;--warn-bg:#f7efd6;
+  --r:12px
+}
+@media (prefers-color-scheme:dark){:root{--bg:#15191a;--card:#1e2426;--ink:#e7e8e3;--muted:#9ba6a1;--line:#323b3d;--accent:#6fc2bb;--accent-ink:#0b1a19;--soft:#1f3433;--good:#7fd19a;--good-bg:#1c3326;--bad:#f09a90;--bad-bg:#3a2220;--warn:#e0c060;--warn-bg:#3a3118;color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(8px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
+header .in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:12px;min-width:0}
+header h1{font-size:1.05rem;margin:0;font-weight:700;white-space:nowrap}
+header select{flex:1;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:6px 10px;min-height:38px;font-size:.95rem}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs button{flex:1;border:0;background:none;padding:10px 2px;min-height:58px;font-size:.78rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button b{font-size:1.15rem;font-weight:500}
+nav.tabs button.on{color:var(--accent);font-weight:600}
+@media (min-width:900px){body{padding-bottom:24px}nav.tabs{position:sticky;top:0;bottom:auto;border:0;border-bottom:1px solid var(--line);justify-content:center}nav.tabs button{flex:0 0 130px;flex-direction:row;gap:6px;font-size:.92rem;min-height:48px}}
+main{max-width:860px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+h2{font-size:1.4rem;margin:8px 0 12px;text-wrap:balance}
+h3{font-size:1.08rem;margin:18px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px;min-width:0}
+.muted{color:var(--muted)}.small{font-size:.88rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 16px;min-height:46px}
+.btn.p{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:.9rem}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
+select,input[type=date],input[type=text],input[type=number],textarea{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 12px;min-height:44px;max-width:100%}
+input[type=text],textarea{width:100%}
+textarea{min-height:140px;resize:vertical}
+textarea.ed{min-height:60px;padding:6px 10px;font-size:.95rem}
+.bar{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;flex:1;min-width:80px}
+.bar>span{display:block;height:100%;background:var(--accent)}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi div{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.kpi b{display:block;font-size:1.5rem;font-variant-numeric:tabular-nums}
+.prose{max-width:68ch}.prose p{margin:8px 0}.prose ul{padding-left:1.2em;margin:6px 0}
+.list button.item{display:flex;width:100%;text-align:left;justify-content:space-between;gap:10px;border:0;border-bottom:1px solid var(--line);background:none;padding:12px 4px;min-height:48px}
+.list button.item:last-child{border-bottom:0}
+.tag{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:20px;background:var(--soft);color:var(--muted)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.q{font-size:1.12rem;font-weight:600;margin:4px 0 14px;white-space:pre-line}
+.opt{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:12px 14px;margin:8px 0;min-height:50px}
+.opt.sel{border-color:var(--accent);background:var(--soft)}
+.opt.ok{border-color:var(--good);background:var(--good-bg)}
+.opt.no{border-color:var(--bad);background:var(--bad-bg)}
+.ans{border-top:1px solid var(--line);margin-top:14px;padding-top:12px;white-space:pre-line}
+.rate{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.rate .btn{padding:8px 4px;font-size:.92rem;display:flex;flex-direction:column;align-items:center}
+.rate .btn small{color:var(--muted);font-size:.72rem}
+.ok-t{color:var(--good)}.bad-t{color:var(--bad)}
+.timer{font-variant-numeric:tabular-nums;font-weight:600}
+.grid50{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:10px}
+.grid50 button{border:1px solid var(--line);background:var(--card);border-radius:6px;min-height:34px;font-size:.8rem;padding:0}
+.grid50 .a{background:var(--soft)}.grid50 .c{outline:2px solid var(--accent)}
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:22px 16px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--accent);background:var(--soft)}
+.note{background:var(--warn-bg);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:.9rem;margin-bottom:10px}
+.status{font-variant-numeric:tabular-nums}
+.src{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center}
+.src:last-child{border-bottom:0}
+.src span{min-width:0;overflow-wrap:anywhere}
+.confirm{border:1px solid var(--bad);background:var(--bad-bg);border-radius:10px;padding:12px;margin-top:10px}
+.ed-item{border-bottom:1px solid var(--line);padding:12px 0}
+.ed-item:last-child{border-bottom:0}
+.ed-item.todo{background:var(--warn-bg);margin:0 -16px;padding:12px 16px}
+.ed-opt{display:flex;gap:8px;align-items:flex-start;margin:4px 0}
+.ed-opt input[type=checkbox]{margin-top:10px;width:20px;height:20px}
+.ed-opt textarea{flex:1}
+#upd{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:30;background:var(--accent);color:var(--accent-ink);padding:8px 14px;border-radius:10px;font-size:.9rem}
+</style>
+</head>
+<body>
+<header><div class="in"><h1>Stofftrainer</h1><select id="stoffsel" aria-label="Stoff wählen"></select><span id="hdr" class="muted small"></span></div></header>
+<nav class="tabs" id="tabs"></nav>
+<main id="app"></main>
+<div id="upd" hidden>Neue Version verfügbar – <button class="btn sm" style="background:var(--card);color:var(--ink)" onclick="location.reload()">Neu laden</button></div>
+<script>
+"use strict";
+const KEY = "stofftrainer_v1";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const DAY = 864e5;
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); };
+const uid = () => Math.random().toString(36).slice(2,10);
+function hid(prefix, text){ let h = 2166136261; const t = String(text||"").toLowerCase().replace(/[^a-z0-9äöüß]+/g," ").trim();
+  for (let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return prefix + h.toString(16).padStart(8,"0"); }
+const shuffle = a => { for (let i = a.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
+
+/* ---------- Zustand ---------- */
+function freshLern(){ return {cards:{}, mc:{}, fehler:{}, sims:[], pruefung:"", neuProTag:20, log:{}}; }
+function fresh(){ return {v:1, aktiv:"", stoffe:{}, simN:20, simMin:30}; }
+let S;
+try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || "{}")); } catch(e) { S = fresh(); }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { toast("Speichern im Browser nicht möglich (Speicher voll oder gesperrt)."); } }
+const stoff = () => S.stoffe[S.aktiv] || null;
+const L = () => { const s = stoff(); if (!s.lern) s.lern = freshLern(); return s.lern; };
+const byId = () => { const s = stoff(), m = {}; if (s){ s.karten.forEach(c => m[c.id] = c); s.mc.forEach(q => m[q.id] = q); } return m; };
+const mcFertig = () => stoff().mc.filter(q => q.r && q.r.length);
+function logToday(k){ const l = L(), d = new Date().toISOString().slice(0,10); l.log[d] = l.log[d] || {}; l.log[d][k] = (l.log[d][k]||0)+1; }
+function toast(msg){ let t = $("#toast"); if (!t){ t = document.createElement("div"); t.id = "toast"; t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:20;max-width:90vw;font-size:.92rem"; document.body.appendChild(t); }
+  t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 4000); }
+
+/* ---------- SM-2 ---------- */
+function schedule(id, q){
+  const l = L(); const c = l.cards[id] || {ef:2.5, iv:0, reps:0, lapses:0};
+  if (q === 0){ c.reps = 0; c.lapses++; c.iv = 0; c.ef = Math.max(1.3, c.ef - .2); c.due = Date.now() + 10*60e3; }
+  else {
+    if (c.reps === 0) c.iv = q === 3 ? 3 : 1;
+    else if (c.reps === 1) c.iv = q === 1 ? 3 : q === 2 ? 4 : 6;
+    else c.iv = Math.round(c.iv * (q === 1 ? 1.2 : q === 2 ? c.ef : c.ef * 1.3));
+    c.ef = Math.max(1.3, c.ef + (q === 1 ? -.15 : q === 3 ? .15 : 0));
+    c.reps++; c.due = today() + c.iv * DAY;
+  }
+  c.last = Date.now(); l.cards[id] = c; logToday("karten"); save();
+}
+function preview(id, q){
+  const c = L().cards[id] || {ef:2.5, iv:0, reps:0};
+  if (q === 0) return "10 min";
+  const iv = c.reps === 0 ? (q === 3 ? 3 : 1) : c.reps === 1 ? (q===1?3:q===2?4:6) : Math.round(c.iv*(q===1?1.2:q===2?c.ef:c.ef*1.3));
+  return iv + (iv === 1 ? " Tag" : " Tage");
+}
+const dueEnd = () => today() + DAY;
+const dueCards = () => stoff().karten.filter(c => L().cards[c.id] && L().cards[c.id].due < dueEnd());
+const newCards = () => stoff().karten.filter(c => !L().cards[c.id]);
+const newDoneToday = () => { const t = today(); return Object.values(L().cards).filter(c => c.first >= t).length; };
+function pensum(){
+  const l = L(), due = dueCards().length, offen = newCards().length;
+  let neu = l.neuProTag, tage = null;
+  if (l.pruefung){ tage = Math.ceil((new Date(l.pruefung).getTime() - today()) / DAY); if (tage > 0) neu = Math.ceil(offen / Math.max(1, tage - 3)); }
+  return {due, neu: Math.min(offen, Math.max(0, neu - newDoneToday())), offen, tage};
+}
+
+/* ---------- Navigation ---------- */
+const TABS = [["start","Start","⌂"],["stoff","Stoff","＋"],["karten","Karten","▤"],["fragen","Fragen","?"],["pruefung","Prüfung","◷"],["mehr","Mehr","…"]];
+const PARENT = {lernen:"karten", mc:"fragen", sim:"pruefung", simres:"pruefung", stat:"mehr", daten:"mehr", neu:"stoff", editor:"stoff", hilfe:"mehr"};
+let view = "start", timerH = null;
+function go(v, arg){
+  view = v;
+  if (!stoff() && !["neu","daten","start","hilfe"].includes(v)) view = v = "neu";
+  $("#tabs").innerHTML = TABS.map(([k,l,i]) => `<button class="${(view===k||PARENT[view]===k)?"on":""}" onclick="go('${k}')"><b>${i}</b>${l}</button>`).join("");
+  renderSel(); window.scrollTo(0,0); (V[v]||V.start)(arg);
+}
+function renderSel(){
+  const ids = Object.keys(S.stoffe);
+  $("#stoffsel").innerHTML = ids.map(id => `<option value="${id}" ${id===S.aktiv?"selected":""}>${esc(S.stoffe[id].name)}</option>`).join("") + `<option value="__neu">+ Neuer Stoff …</option>`;
+  $("#stoffsel").hidden = !ids.length;
+}
+$("#stoffsel").onchange = e => { if (e.target.value === "__neu") go("neu"); else { S.aktiv = e.target.value; save(); go("start"); } };
+const app = h => { $("#app").innerHTML = h; };
+const topts = (sel, list) => { const ts = [...new Set(list.map(x => x.t).filter(Boolean))].sort();
+  return `<option value="">Alle Themen</option>` + ts.map(t => `<option value="${esc(t)}" ${sel===t?"selected":""}>${esc(t)}</option>`).join(""); };
+function themaStat(t){
+  const s = stoff(), l = L(), cs = s.karten.filter(c => c.t === t), qs = s.mc.filter(q => q.t === t);
+  const sicher = cs.filter(c => l.cards[c.id] && l.cards[c.id].iv >= 7).length;
+  let n = 0, ok = 0; qs.forEach(q => { const m = l.mc[q.id]; if (m){ n += m.n; ok += m.ok; } });
+  return {cs:cs.length, sicher, qs:qs.length, n, ok};
+}
+
+/* ---------- Ansichten ---------- */
+const V = {};
+V.neu = () => app(`<h2>${Object.keys(S.stoffe).length ? "Neuer Stoff" : "Willkommen"}</h2>
+  <div class="card prose"><p style="margin-top:0">Ein Stoff ist ein Thema, das du lernen willst: Fahrradprüfung, Erste Hilfe, Biologie 7, Führerschein-Theorie. Du lädst Unterlagen hoch (PDF, Fotos, Screenshots oder Text), die App liest sie aus, erzeugt Lernkarten und Fragen und fragt dich ab. Alles passiert auf diesem Gerät, ohne Internet.</p>
+  <label for="nn" class="small muted">Name des Stoffs</label><input type="text" id="nn" placeholder="z. B. Fahrradprüfung 4. Klasse" maxlength="60">
+  <div class="row" style="margin-top:12px"><button class="btn p" onclick="neuStoff()">Anlegen</button>${Object.keys(S.stoffe).length?`<button class="btn" onclick="go('start')">Abbrechen</button>`:""}</div></div>
+  <div class="card small muted"><b>Fertige Fragen vorhanden?</b> Unter Mehr → Daten lässt sich ein Fragenpaket (JSON) importieren.</div>`);
+window.neuStoff = () => { const n = $("#nn").value.trim(); if (!n){ $("#nn").focus(); return; }
+  const id = uid(); S.stoffe[id] = {id, name:n, erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; S.aktiv = id; save(); go("stoff"); };
+
+V.start = () => {
+  const s = stoff(); if (!s) return V.neu();
+  const l = L(), p = pensum(), fl = Object.keys(l.fehler).length, offen = s.mc.filter(q => !q.r || !q.r.length).length;
+  const themen = [...new Set(s.karten.map(c=>c.t).concat(s.mc.map(q=>q.t)).filter(Boolean))];
+  const rows = themen.map(t => { const st = themaStat(t); const pr = (st.cs ? st.sicher/st.cs : 0)*.5 + (st.n ? Math.min(1, st.ok/Math.max(1,st.qs)) : 0)*.5;
+    return `<tr><td>${esc(t)}<div class="small muted">${st.sicher}/${st.cs} Karten sicher · ${st.n?Math.round(100*st.ok/st.n)+" % richtig":"noch keine Fragen"}</div></td><td style="width:30%"><div class="bar"><span style="width:${Math.round(pr*100)}%"></span></div></td></tr>`; }).join("");
+  const last = l.sims[l.sims.length-1];
+  if (!s.karten.length && !s.mc.length) return app(`<h2>${esc(s.name)}</h2><div class="card prose"><p style="margin-top:0">Noch keine Fragen. Lade unter <b>Stoff</b> Unterlagen hoch und lass Fragen erzeugen.</p><button class="btn p" onclick="go('stoff')">Stoff hochladen</button></div>`);
+  app(`<h2>${esc(s.name)} · heute</h2>
+  ${offen ? `<div class="note">${offen} Frage${offen===1?"":"n"} ohne markierte richtige Antwort. <a href="#" onclick="go('editor',{todo:true});return false">Im Editor festlegen</a>, dann werden sie abgefragt.</div>` : ""}
+  <div class="kpi"><div><span class="muted small">Fällige Wiederholungen</span><b>${p.due}</b></div><div><span class="muted small">Neue Karten heute</span><b>${p.neu}</b></div>
+  <div><span class="muted small">Fehlerliste</span><b>${fl}</b></div><div><span class="muted small">Prüfung</span><b>${p.tage == null ? "–" : p.tage > 0 ? p.tage + " Tage" : "vorbei"}</b></div></div>
+  <div class="card" style="margin-top:14px"><div class="row"><button class="btn p" onclick="go('lernen',{})" ${p.due+p.neu?"":"disabled"}>Karten lernen (${p.due + p.neu})</button>
+  <button class="btn" onclick="startMC({n:10})" ${mcFertig().length?"":"disabled"}>10 Fragen</button><button class="btn" onclick="startMC({fehler:true})" ${fl?"":"disabled"}>Fehlerliste üben</button></div>
+  <p class="small muted" style="margin-bottom:0">${s.karten.length} Karten, ${s.mc.length} Fragen aus ${s.quellen.length} Quelle${s.quellen.length===1?"":"n"}.${p.tage > 0 ? " Neue Karten werden so verteilt, dass die letzten Tage vor der Prüfung der Wiederholung dienen." : ""}</p></div>
+  <div class="card"><div class="row"><label for="pd">Prüfungsdatum</label><input type="date" id="pd" value="${l.pruefung}" onchange="L().pruefung=this.value;save();go('start')">
+  <label for="np" class="small muted">Neue Karten/Tag</label><select id="np" onchange="L().neuProTag=+this.value;save();go('start')">${[5,10,15,20,30].map(n=>`<option ${l.neuProTag==n?"selected":""}>${n}</option>`).join("")}</select></div>
+  ${last ? `<p class="small muted" style="margin-bottom:0">Letzte Prüfungssimulation: ${new Date(last.t).toLocaleDateString("de-DE")} – ${last.pct} %</p>` : ""}</div>
+  ${rows ? `<h2>Fortschritt je Thema</h2><div class="card tw"><table>${rows}</table></div>` : ""}`);
+};
+
+/* ---------- Stoff: Quellen, OCR, Erzeugen ---------- */
+let pend = [];   // vorbereitete Quellen: {name, text, hinweis}
+let busy = false;
+V.stoff = () => {
+  const s = stoff();
+  app(`<h2>${esc(s.name)} · Stoff</h2>
+  <div class="card"><h3 style="margin-top:0">Unterlagen hinzufügen</h3>
+  <div class="drop" id="drop">Dateien hierher ziehen<br><span class="small">PDF, Foto oder Screenshot (JPG, PNG, WebP). Fotos werden per Texterkennung gelesen.</span>
+  <div class="row" style="justify-content:center;margin-top:10px"><label class="btn" for="fin">Dateien wählen …</label><input type="file" id="fin" hidden multiple accept="application/pdf,.pdf,image/*" onchange="addFiles(this.files)">
+  <label class="btn" for="fcam">Foto aufnehmen</label><input type="file" id="fcam" hidden accept="image/*" capture="environment" onchange="addFiles(this.files)"></div>
+  <div class="status small muted" id="ost" style="margin-top:8px"></div></div>
+  <h3>Oder Text einfügen</h3><textarea id="ptxt" placeholder="Text aus einem Buch, einer Webseite oder deinen Notizen …"></textarea>
+  <div class="row" style="margin-top:8px"><input type="text" id="ptn" placeholder="Bezeichnung (optional)" style="flex:1;min-width:160px"><button class="btn" onclick="addText()">Text übernehmen</button></div></div>
+  <div class="card" id="pendbox" ${pend.length?"":"hidden"}><h3 style="margin-top:0">Bereit zum Erzeugen</h3><div id="pendlist"></div>
+  <div class="row" style="margin-top:12px"><label class="small muted" for="gk">Karten je Quelle (max.)</label><select id="gk">${[10,20,30,50,100].map(n=>`<option ${n===30?"selected":""}>${n}</option>`).join("")}</select>
+  <label class="small muted" for="gq">MC-Fragen je Quelle (max.)</label><select id="gq">${[10,20,30,50,100].map(n=>`<option ${n===30?"selected":""}>${n}</option>`).join("")}</select></div>
+  <div class="row" style="margin-top:10px"><button class="btn p" onclick="erzeugen()">Fragen erzeugen</button><span class="status small muted" id="gst"></span></div>
+  <p class="small muted" style="margin-bottom:0">Erkannte Prüfungsfragen aus dem Text werden immer übernommen; die Zahlen begrenzen nur die zusätzlich erzeugten Lückentext-, Zahlen- und Definitionsfragen. Danach im Editor durchsehen.</p></div>
+  <div class="card"><h3 style="margin-top:0">Quellen in diesem Stoff</h3>${s.quellen.length ? s.quellen.map(q => `<div class="src"><span>${esc(q.name)} <span class="tag">${Math.round((q.zeichen||0)/1000)} k Zeichen</span> <span class="small muted">${s.karten.filter(c=>c.src===q.id).length} Karten · ${s.mc.filter(m=>m.src===q.id).length} Fragen</span></span><span style="white-space:nowrap"><button class="btn sm" onclick="go('editor',{src:'${q.id}'})">Editor</button> <button class="btn sm" onclick="delQuelle('${q.id}')">Entfernen</button></span></div>`).join("") : '<p class="muted">Noch keine.</p>'}
+  ${s.karten.length || s.mc.length ? `<div class="row" style="margin-top:10px"><button class="btn" onclick="go('editor',{})">Alle Fragen im Editor</button><button class="btn" onclick="neueFrage()">Frage von Hand anlegen</button></div>` : ""}</div>
+  <div class="card"><h3 style="margin-top:0">Stoff verwalten</h3><div class="row"><button class="btn" onclick="umbenennen()">Umbenennen</button><button class="btn" onclick="exportStoff()">Als Fragenpaket exportieren</button><button class="btn danger" onclick="askDel()">Stoff löschen</button></div><div id="delc"></div></div>`);
+  renderPend();
+  const d = $("#drop");
+  d.ondragover = e => { e.preventDefault(); d.classList.add("over"); }; d.ondragleave = () => d.classList.remove("over");
+  d.ondrop = e => { e.preventDefault(); d.classList.remove("over"); addFiles(e.dataTransfer.files); };
+};
+function renderPend(){ const b = $("#pendbox"); if (!b) return; b.hidden = !pend.length;
+  $("#pendlist").innerHTML = pend.map((p,i) => `<div class="src"><span>${esc(p.name)} <span class="tag">${Math.round(p.text.length/1000)} k Zeichen</span>${p.hinweis?` <span class="small muted">${esc(p.hinweis)}</span>`:""} <button class="btn sm" onclick="zeigText(${i})">Text ansehen</button></span><button class="btn sm" onclick="pend.splice(${i},1);renderPend()">✕</button></div>`).join(""); }
+window.zeigText = i => { const p = pend[i]; app(`<button class="btn sm" onclick="go('stoff')">← Zurück</button><h2>${esc(p.name)}</h2><div class="card"><p class="small muted">Erkannter Text. Du kannst ihn hier korrigieren, bevor Fragen erzeugt werden.</p><textarea id="tx" style="min-height:50vh">${esc(p.text)}</textarea><div class="row" style="margin-top:10px"><button class="btn p" onclick="pend[${i}].text=$('#tx').value;go('stoff')">Übernehmen</button></div></div>`); };
+window.addText = () => { const t = $("#ptxt").value.trim(); if (t.length < 40){ toast("Bitte etwas mehr Text (mindestens 40 Zeichen)."); return; }
+  pend.push({name: $("#ptn").value.trim() || "Text vom " + new Date().toLocaleDateString("de-DE"), text:t}); $("#ptxt").value = ""; $("#ptn").value = ""; renderPend(); };
+const st = m => { const e = $("#ost"); if (e) e.textContent = m; };
+window.addFiles = async files => {
+  if (busy) { toast("Bitte warten, eine Datei wird noch gelesen."); return; }
+  busy = true; const imgs = [];
+  try {
+    for (const f of Array.from(files || [])){
+      try {
+        if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) await addPdf(f);
+        else if (/^image\//.test(f.type)) imgs.push(f);
+        else toast("Nicht unterstützt: " + f.name);
+      } catch(e){ console.error(e); toast("Konnte " + f.name + " nicht lesen: " + (e.message || e)); }
+    }
+    if (imgs.length){
+      let text = "";
+      for (let i = 0; i < imgs.length; i++){ st(`Texterkennung Bild ${i+1}/${imgs.length} …`); const t = await ocr(imgs[i], p => st(`Texterkennung Bild ${i+1}/${imgs.length} … ${Math.round(p*100)} %`)); if (t.trim()) text += (text ? "\n\n" : "") + t.trim(); }
+      if (text.replace(/\s/g,"").length < 40) toast("Auf den Bildern wurde kaum Text erkannt.");
+      else pend.push({name: imgs.length === 1 ? imgs[0].name : imgs.length + " Bilder (" + imgs[0].name + " …)", text, hinweis: "aus Texterkennung – bitte prüfen"});
+    }
+  } finally { busy = false; st(""); renderPend(); const fi = $("#fin"); if (fi) fi.value = ""; const fc = $("#fcam"); if (fc) fc.value = ""; }
+};
+async function addPdf(f){
+  if (!window.pdfjsLib) throw new Error("PDF-Bibliothek fehlt");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "pdf.worker.min.js";
+  st("Lese " + f.name + " …");
+  const pdf = await pdfjsLib.getDocument({data: await f.arrayBuffer()}).promise;
+  let text = "", ohne = [];
+  for (let i = 1; i <= pdf.numPages; i++){
+    const page = await pdf.getPage(i), tc = await page.getTextContent();
+    let pt = "", lastY = null;
+    for (const it of tc.items){ if (!("str" in it)) continue; const y = it.transform ? Math.round(it.transform[5]) : null; if (lastY !== null && Math.abs(y - lastY) > 2 && !pt.endsWith("\n")) pt += "\n"; pt += it.str + (it.hasEOL ? "\n" : " "); lastY = y; }
+    pt = pt.replace(/[ \t]+\n/g, "\n").replace(/ {2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+    if (pt.replace(/\s/g, "").length < 80) ohne.push(i); else text += `\n\n[Seite ${i}]\n` + pt;
+    st(`Lese ${f.name} … Seite ${i}/${pdf.numPages}`);
+  }
+  // Seiten ohne Textebene (Scan, Screenshot-PDF) per Texterkennung
+  let ocrText = "";
+  for (let k = 0; k < Math.min(ohne.length, 60); k++){
+    const i = ohne[k], page = await pdf.getPage(i), vp = page.getViewport({scale: 2});
+    const cv = document.createElement("canvas"); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    await page.render({canvasContext: cv.getContext("2d"), viewport: vp}).promise;
+    const t = await ocr(cv, p => st(`Texterkennung ${f.name} Seite ${i} (${k+1}/${Math.min(ohne.length,60)}) … ${Math.round(p*100)} %`));
+    if (t.replace(/\s/g,"").length > 40) ocrText += `\n\n[Seite ${i}]\n` + t.trim();
+  }
+  const all = (text + ocrText).trim();
+  if (all.length < 40) throw new Error("kein Text gefunden");
+  pend.push({name: f.name, text: all, hinweis: ohne.length ? ohne.length + " Seite(n) per Texterkennung" + (ohne.length > 60 ? " (nur die ersten 60)" : "") : ""});
+}
+let ocrWorker = null;
+async function ocr(img, onP){
+  if (!window.Tesseract) throw new Error("Texterkennung nicht verfügbar");
+  if (!ocrWorker){ st("Texterkennung wird vorbereitet (einmalig) …");
+    ocrWorker = await Tesseract.createWorker("deu", 1, {workerPath: "worker.min.js", corePath: ".", langPath: ".", gzip: true,
+      logger: m => { if (m.status === "recognizing text" && onP) onP(m.progress || 0); }}); }
+  const r = await ocrWorker.recognize(img);
+  return (r.data && r.data.text) || "";
+}
+window.erzeugen = () => {
+  const s = stoff(); if (!pend.length) return;
+  const nK = +$("#gk").value, nQ = +$("#gq").value; let addK = 0, addQ = 0, offen = 0; const hin = [];
+  for (const p of pend){
+    const res = StoffGen.erzeugen(p.text, {nK, nQ, name: s.name});
+    const id = uid(); s.quellen.push({id, name: p.name, zeichen: p.text.length, text: p.text.slice(0, 200000)});
+    for (const k of res.karten){ const kid = hid("k", k.f); if (s.karten.some(x => x.id === kid)) continue; s.karten.push({id: kid, f: k.f, a: k.a, t: k.t || "", art: k.art, src: id}); addK++; }
+    for (const q of res.mc){ const qid = hid("q", q.f); if (s.mc.some(x => x.id === qid)) continue; s.mc.push({id: qid, f: q.f, o: q.o, r: q.r || [], e: q.e || "", t: q.t || "", art: q.art, src: id}); addQ++; if (!q.r || !q.r.length) offen++; }
+    hin.push(...res.hinweise);
+  }
+  pend = []; save();
+  toast(`${addK} Karten und ${addQ} Fragen hinzugefügt.${offen ? " " + offen + " Fragen brauchen noch die richtige Antwort." : ""}`);
+  go("editor", {todo: offen > 0, hinweise: hin});
+};
+window.delQuelle = id => { const s = stoff(); s.quellen = s.quellen.filter(q => q.id !== id); s.karten = s.karten.filter(c => c.src !== id); s.mc = s.mc.filter(q => q.src !== id); save(); V.stoff(); };
+window.umbenennen = () => { const s = stoff(); app(`<h2>Umbenennen</h2><div class="card"><input type="text" id="rn" value="${esc(s.name)}" maxlength="60"><div class="row" style="margin-top:12px"><button class="btn p" onclick="stoff().name=$('#rn').value.trim()||stoff().name;save();go('stoff')">Speichern</button><button class="btn" onclick="go('stoff')">Abbrechen</button></div></div>`); };
+window.askDel = () => { $("#delc").innerHTML = `<div class="confirm">Stoff „${esc(stoff().name)}“ mit allen Fragen und dem Lernstand löschen? Das lässt sich nicht rückgängig machen.<div class="row" style="margin-top:8px"><button class="btn danger" onclick="delStoff()">Ja, löschen</button><button class="btn sm" onclick="$('#delc').innerHTML=''">Abbrechen</button></div></div>`; };
+window.delStoff = () => { delete S.stoffe[S.aktiv]; S.aktiv = Object.keys(S.stoffe)[0] || ""; save(); go("start"); };
+window.neueFrage = () => { const s = stoff(); let src = s.quellen.find(q => q.manuell); if (!src){ src = {id: uid(), name: "Von Hand angelegt", manuell: true, zeichen: 0}; s.quellen.push(src); }
+  const id = "q" + uid(); s.mc.push({id, f: "", o: ["", "", "", ""], r: [], e: "", t: "", art: "manuell", src: src.id}); save(); go("editor", {src: src.id}); };
+
+/* ---------- Editor ---------- */
+const ART = {vorhanden:"aus dem Text", definition:"Definition", aufzaehlung:"Aufzählung", luecke:"Lückentext", zahl:"Zahlenfrage", manuell:"von Hand", import:"Import"};
+V.editor = o => {
+  o = o || {}; const s = stoff(), m = byId();
+  let items = s.mc.map(q => ({q, typ:"mc"})).concat(s.karten.map(k => ({q:k, typ:"k"})));
+  if (o.src) items = items.filter(x => x.q.src === o.src);
+  if (o.todo) items = items.filter(x => x.typ === "mc" && !x.q.r.length);
+  items.sort((a,b) => (a.typ === "mc" && !a.q.r.length ? 0 : 1) - (b.typ === "mc" && !b.q.r.length ? 0 : 1));
+  const qn = o.src ? (s.quellen.find(q => q.id === o.src) || {}).name : "";
+  app(`<button class="btn sm" onclick="go('stoff')">← Stoff</button><h2>Fragen-Editor${qn ? " · " + esc(qn) : ""}</h2>
+  ${(o.hinweise||[]).map(h => `<div class="note">${esc(h)}</div>`).join("")}
+  <div class="card"><p class="small muted" style="margin-top:0">${items.length} Einträge. Änderungen werden beim Verlassen eines Feldes gespeichert. Bei MC-Fragen die richtige(n) Antwort(en) ankreuzen; Fragen ohne Kreuz werden nicht abgefragt. Gelb markierte brauchen noch eine Lösung.</p>
+  <div class="row"><select id="ef" onchange="go('editor',{src:this.value||undefined})"><option value="">Alle Quellen</option>${s.quellen.map(q => `<option value="${q.id}" ${o.src===q.id?"selected":""}>${esc(q.name)}</option>`).join("")}</select>
+  <button class="btn sm ${o.todo?"p":""}" onclick="go('editor',{src:'${o.src||""}'||undefined,todo:${!o.todo}})">Nur ohne Lösung</button><button class="btn sm" onclick="neueFrage()">+ Neue MC-Frage</button><button class="btn sm" onclick="neueKarte()">+ Neue Karte</button></div></div>
+  <div class="card" id="edlist">${items.map(x => x.typ === "mc" ? edMC(x.q) : edK(x.q)).join("") || '<p class="muted">Nichts zu zeigen.</p>'}</div>`);
+};
+function edMC(q){ return `<div class="ed-item ${q.r.length?"":"todo"}" id="ed-${q.id}"><div class="row small muted" style="justify-content:space-between"><span><span class="tag">${esc(q.t||"ohne Thema")}</span> <span class="tag">${ART[q.art]||"MC"}</span></span><button class="btn sm danger" onclick="delItem('${q.id}')">Löschen</button></div>
+  <textarea class="ed" onchange="edSet('${q.id}','f',this.value)" placeholder="Frage">${esc(q.f)}</textarea>
+  ${q.o.map((op,i) => `<div class="ed-opt"><input type="checkbox" ${q.r.includes(i)?"checked":""} onchange="edCorrect('${q.id}',${i},this.checked)" aria-label="richtig"><textarea class="ed" rows="1" onchange="edOpt('${q.id}',${i},this.value)">${esc(op)}</textarea></div>`).join("")}
+  <div class="row"><input type="text" class="ed" style="flex:1" placeholder="Erklärung (optional)" value="${esc(q.e)}" onchange="edSet('${q.id}','e',this.value)"><input type="text" style="width:160px" placeholder="Thema" value="${esc(q.t)}" onchange="edSet('${q.id}','t',this.value)"></div></div>`; }
+function edK(k){ return `<div class="ed-item" id="ed-${k.id}"><div class="row small muted" style="justify-content:space-between"><span><span class="tag">${esc(k.t||"ohne Thema")}</span> <span class="tag">Karte · ${ART[k.art]||""}</span></span><button class="btn sm danger" onclick="delItem('${k.id}')">Löschen</button></div>
+  <textarea class="ed" onchange="edSet('${k.id}','f',this.value)" placeholder="Frage">${esc(k.f)}</textarea><textarea class="ed" onchange="edSet('${k.id}','a',this.value)" placeholder="Antwort">${esc(k.a)}</textarea>
+  <input type="text" style="width:160px" placeholder="Thema" value="${esc(k.t)}" onchange="edSet('${k.id}','t',this.value)"></div>`; }
+window.edSet = (id, k, v) => { const x = byId()[id]; if (x){ x[k] = v.trim(); save(); } };
+window.edOpt = (id, i, v) => { const x = byId()[id]; if (x){ x.o[i] = v.trim(); save(); } };
+window.edCorrect = (id, i, on) => { const x = byId()[id]; if (!x) return; x.r = on ? [...new Set(x.r.concat(i))].sort() : x.r.filter(j => j !== i); save(); const e = $("#ed-" + id); if (e) e.classList.toggle("todo", !x.r.length); };
+window.delItem = id => { const s = stoff(); s.mc = s.mc.filter(q => q.id !== id); s.karten = s.karten.filter(k => k.id !== id); delete L().fehler[id]; save(); const e = $("#ed-" + id); if (e) e.remove(); };
+window.neueKarte = () => { const s = stoff(); let src = s.quellen.find(q => q.manuell); if (!src){ src = {id: uid(), name: "Von Hand angelegt", manuell: true, zeichen: 0}; s.quellen.push(src); }
+  s.karten.push({id: "k" + uid(), f: "", a: "", t: "", art: "manuell", src: src.id}); save(); go("editor", {src: src.id}); };
+
+/* ---------- Lernkarten ---------- */
+let queue = [], cur = null, deckOpts = {};
+V.karten = () => {
+  const s = stoff(), l = L();
+  const themen = [...new Set(s.karten.map(c => c.t))].sort();
+  const rows = themen.map(t => { const cs = s.karten.filter(c => c.t === t), due = cs.filter(c => l.cards[c.id] && l.cards[c.id].due < dueEnd()).length, neu = cs.filter(c => !l.cards[c.id]).length;
+    return `<tr><td>${esc(t || "ohne Thema")}</td><td class="n">${due}</td><td class="n">${neu}</td><td class="n">${cs.length}</td></tr>`; }).join("");
+  app(`<h2>Lernkarten</h2><div class="card"><p class="small muted" style="margin-top:0">Frage lesen, Antwort im Kopf formulieren, aufdecken, ehrlich bewerten. Was sitzt, kommt seltener dran.</p>
+  <div class="row"><select id="kb">${topts("", s.karten)}</select><button class="btn p" onclick="go('lernen',{t:$('#kb').value})" ${s.karten.length?"":"disabled"}>Lernen</button></div></div>
+  ${rows ? `<div class="card tw"><table><tr><th>Thema</th><th class="n">fällig</th><th class="n">neu</th><th class="n">gesamt</th></tr>${rows}</table></div>` : '<div class="card muted">Noch keine Karten. Unter Stoff Unterlagen hochladen.</div>'}`);
+};
+function buildQueue(o){
+  const s = stoff(), l = L(), f = c => !o.t || c.t === o.t;
+  const due = s.karten.filter(c => f(c) && l.cards[c.id] && l.cards[c.id].due < dueEnd()).sort((a,b) => l.cards[a.id].due - l.cards[b.id].due);
+  const lim = o.t ? 20 : Math.max(pensum().neu, 0);
+  return due.concat(s.karten.filter(c => f(c) && !l.cards[c.id]).slice(0, lim)).map(c => c.id);
+}
+V.lernen = o => { deckOpts = o || {}; queue = buildQueue(deckOpts); nextCard(); };
+function nextCard(){
+  const s = stoff(), l = L();
+  if (!queue.length){ app(`<div class="card"><h2>Für jetzt erledigt</h2><p>Keine fälligen Karten ${deckOpts.t ? "in diesem Thema " : ""}mehr. Morgen geht es weiter.</p>
+    <div class="row"><button class="btn" onclick="go('karten')">Zurück</button>${s.karten.some(c => !l.cards[c.id] && (!deckOpts.t||c.t===deckOpts.t)) ? `<button class="btn" onclick="extraNeu()">10 weitere neue Karten</button>` : ""}</div></div>`); return; }
+  cur = byId()[queue[0]]; if (!cur || !cur.f){ queue.shift(); return nextCard(); }
+  app(`<div class="row" style="justify-content:space-between"><button class="btn sm" onclick="go('karten')">← Beenden</button><span class="small muted">noch ${queue.length}</span></div>
+  <div class="card" style="margin-top:10px">${cur.t?`<span class="tag">${esc(cur.t)}</span>`:""}${!l.cards[cur.id]?' <span class="tag">neu</span>':""}
+   <div class="q">${esc(cur.f)}</div>
+   <div id="back" hidden><div class="ans">${esc(cur.a)}</div>
+    <div class="rate">${["Nochmal","Schwer","Gut","Leicht"].map((lb,i) => `<button class="btn" onclick="rate(${i})">${lb}<small>${preview(cur.id,i)}</small></button>`).join("")}</div></div>
+   <button id="show" class="btn p" style="width:100%;margin-top:8px" onclick="$('#back').hidden=false;this.remove()">Antwort zeigen</button></div>
+  <p class="small muted">Tastatur: Leertaste = aufdecken, 1–4 = bewerten.</p>`);
+}
+window.extraNeu = () => { const l = L(); queue = stoff().karten.filter(c => (!deckOpts.t || c.t === deckOpts.t) && !l.cards[c.id]).slice(0,10).map(c=>c.id); nextCard(); };
+window.rate = q => { const id = queue.shift(), l = L(); const isNew = !l.cards[id]; schedule(id, q); if (isNew){ l.cards[id].first = Date.now(); save(); }
+  if (q === 0) queue.splice(Math.min(queue.length, 4), 0, id); nextCard(); };
+document.addEventListener("keydown", e => {
+  if (view !== "lernen" || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.key === " " && $("#show")){ e.preventDefault(); $("#show").click(); }
+  else if (/^[1-4]$/.test(e.key) && !$("#show") && $("#back")) rate(+e.key - 1);
+});
+
+/* ---------- MC-Training ---------- */
+let mcQ = [], mcI = 0, mcOpts = {}, mcSel = [], mcStats = {n:0, ok:0};
+V.fragen = () => {
+  const s = stoff(), l = L(), m = byId(), fl = Object.keys(l.fehler).filter(id => m[id]).length, fertig = mcFertig();
+  app(`<h2>Fragen trainieren</h2>
+  <div class="card"><p class="small muted" style="margin-top:0">Multiple-Choice mit sofortiger Erklärung. Falsch beantwortete Fragen landen in der Fehlerliste und bleiben dort, bis sie zweimal hintereinander richtig beantwortet wurden.</p>
+  <div class="row"><select id="mb">${topts("", fertig)}</select><select id="mn">${[10,20,30,50].map(n=>`<option>${n}</option>`).join("")}</select>
+  <button class="btn p" onclick="startMC({t:$('#mb').value,n:+$('#mn').value})" ${fertig.length?"":"disabled"}>Starten</button></div></div>
+  <div class="card"><h3 style="margin-top:0">Fehlerliste (${fl})</h3>
+  ${fl ? `<button class="btn p" onclick="startMC({fehler:true})">Fehlerliste üben</button><ul class="small">${Object.keys(l.fehler).filter(id=>m[id]).slice(0,40).map(id => `<li>${esc(m[id].f)} <span class="muted">(${l.fehler[id]}/2)</span></li>`).join("")}</ul>` : '<p class="muted">Leer.</p>'}</div>
+  <p class="small muted">${fertig.length} Fragen abfragbar${s.mc.length > fertig.length ? `, ${s.mc.length - fertig.length} ohne Lösung (Editor)` : ""}.</p>`);
+};
+window.startMC = o => { mcOpts = o; const l = L(), m = byId();
+  let pool = o.fehler ? Object.keys(l.fehler).filter(id => m[id] && m[id].o && m[id].r && m[id].r.length).map(id => m[id]) : mcFertig().filter(q => !o.t || q.t === o.t);
+  pool = shuffle(pool.slice()).sort((a,b) => ((l.mc[a.id]||{}).n||0) - ((l.mc[b.id]||{}).n||0));
+  mcQ = pool.slice(0, o.fehler ? 30 : (o.n || 10)).map(q => ({q, perm: shuffle(q.o.map((_,i)=>i).filter(i => q.o[i]))})); mcI = 0; mcStats = {n:0, ok:0}; go("mc"); };
+V.mc = () => {
+  if (!mcQ.length) return go("fragen");
+  if (mcI >= mcQ.length){ app(`<div class="card"><h2>Runde beendet</h2><p>${mcStats.ok} von ${mcStats.n} richtig.</p><div class="row"><button class="btn p" onclick="startMC(mcOpts)">Neue Runde</button><button class="btn" onclick="go('fragen')">Zurück</button></div></div>`); return; }
+  const {q, perm} = mcQ[mcI]; mcSel = []; const multi = q.r.length > 1;
+  app(`<div class="row" style="justify-content:space-between"><button class="btn sm" onclick="go('fragen')">← Beenden</button><span class="small muted">${mcI+1} / ${mcQ.length}</span></div>
+  <div class="card" style="margin-top:10px">${q.t?`<span class="tag">${esc(q.t)}</span>`:""}<div class="q">${esc(q.f)}</div>${multi?'<p class="small muted">Mehrere Antworten richtig – alle auswählen, dann prüfen.</p>':""}
+  <div id="opts">${perm.map((oi,k) => `<button class="opt" data-i="${oi}" onclick="mcPick(${oi},this)">${String.fromCharCode(65+k)}) ${esc(q.o[oi])}</button>`).join("")}</div>
+  ${multi?'<button class="btn p" id="chk" onclick="mcCheck()">Prüfen</button>':""}<div id="fb"></div></div>`);
+};
+window.mcPick = (i, el) => { const {q} = mcQ[mcI]; if ($("#fb").innerHTML) return;
+  if (q.r.length > 1){ el.classList.toggle("sel"); mcSel = mcSel.includes(i) ? mcSel.filter(x=>x!==i) : mcSel.concat(i); return; }
+  mcSel = [i]; mcCheck(); };
+window.mcCheck = () => {
+  const {q} = mcQ[mcI], l = L(); if (!mcSel.length) return;
+  const ok = mcSel.length === q.r.length && mcSel.every(i => q.r.includes(i));
+  document.querySelectorAll("#opts .opt").forEach(b => { const i = +b.dataset.i; if (q.r.includes(i)) b.classList.add("ok"); else if (mcSel.includes(i)) b.classList.add("no"); b.disabled = true; });
+  const m = l.mc[q.id] || {n:0, ok:0}; m.n++; if (ok) m.ok++; m.last = Date.now(); l.mc[q.id] = m;
+  if (!ok) l.fehler[q.id] = 0; else if (q.id in l.fehler){ l.fehler[q.id]++; if (l.fehler[q.id] >= 2) delete l.fehler[q.id]; }
+  mcStats.n++; if (ok) mcStats.ok++; logToday("fragen"); save();
+  const st = q.id in l.fehler ? `<span class="small muted"> · Fehlerliste ${l.fehler[q.id]}/2</span>` : "";
+  $("#fb").innerHTML = `<div class="ans"><b class="${ok?"ok-t":"bad-t"}">${ok?"Richtig.":"Nicht richtig."}</b>${st}${q.e?`<div style="margin-top:6px">${esc(q.e)}</div>`:""}</div>
+   <button class="btn p" style="width:100%;margin-top:12px" onclick="mcI++;V.mc()">Weiter</button>`;
+  const c = $("#chk"); if (c) c.remove();
+};
+
+/* ---------- Prüfungssimulation ---------- */
+let sim = null;
+V.pruefung = () => {
+  const l = L(), fertig = mcFertig(), n = Math.min(S.simN, fertig.length);
+  const hist = l.sims.slice().reverse().map(x => `<tr><td>${new Date(x.t).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"})}</td><td class="n">${x.ok}/${x.n}</td><td class="n">${x.pct} %</td><td class="n">${Math.round(x.dauer/60)} min</td></tr>`).join("");
+  app(`<h2>Prüfungssimulation</h2><div class="card prose"><p style="margin-top:0">Wie in einer echten Prüfung: Fragen gemischt über alle Themen, Rückmeldung erst am Ende, Zeit läuft. Falsche Antworten landen danach in der Fehlerliste.</p>
+  <div class="row"><label class="small muted" for="sn">Fragen</label><select id="sn" onchange="S.simN=+this.value;save();V.pruefung()">${[10,15,20,30,40,50].map(x=>`<option ${S.simN==x?"selected":""}>${x}</option>`).join("")}</select>
+  <label class="small muted" for="sm">Minuten</label><select id="sm" onchange="S.simMin=+this.value;save()">${[10,15,20,30,45,60,90].map(x=>`<option ${S.simMin==x?"selected":""}>${x}</option>`).join("")}</select></div>
+  <p class="small muted">${fertig.length} Fragen verfügbar${fertig.length < S.simN ? ", die Simulation nutzt alle " + fertig.length : ""}.</p>
+  ${sim && !sim.done ? `<button class="btn p" onclick="go('sim')">Laufende Simulation fortsetzen</button>` : `<button class="btn p" onclick="simStart()" ${n>=5?"":"disabled"}>Simulation starten</button>`}</div>
+  <div class="card"><h3 style="margin-top:0">Verlauf</h3>${hist ? `<div class="tw"><table><tr><th>Datum</th><th class="n">richtig</th><th class="n">Quote</th><th class="n">Dauer</th></tr>${hist}</table></div>` : '<p class="muted">Noch keine Simulation.</p>'}</div>`);
+};
+window.simStart = () => {
+  const fertig = mcFertig(), N = Math.min(S.simN, fertig.length), pool = shuffle(fertig.slice()), by = {};
+  pool.forEach(q => (by[q.t] = by[q.t] || []).push(q));
+  const pick = [], keys = shuffle(Object.keys(by));
+  while (pick.length < N && keys.some(k => by[k].length)) for (const k of keys){ if (pick.length >= N) break; const q = by[k].pop(); if (q) pick.push(q); }
+  sim = {qs: shuffle(pick).map(q => ({id:q.id, perm: shuffle(q.o.map((_,i)=>i).filter(i => q.o[i])), a:null})), i:0, start:Date.now(), done:false, min:S.simMin};
+  go("sim");
+};
+function simTick(){ if (!sim || sim.done){ clearInterval(timerH); timerH = null; return; }
+  const left = sim.start + sim.min*60e3 - Date.now(); if (left <= 0){ simEnd(); return; }
+  const t = `${Math.floor(left/60e3)}:${String(Math.floor(left/1e3)%60).padStart(2,"0")}`; $("#hdr").textContent = t; const e = $("#tm"); if (e) e.textContent = t; }
+V.sim = () => {
+  if (!sim || sim.done) return go("pruefung");
+  if (!timerH) timerH = setInterval(simTick, 1000);
+  const m = byId(), N = sim.qs.length, s = sim.qs[sim.i], q = m[s.id], answered = sim.qs.filter(x => x.a !== null).length;
+  if (!q){ sim.qs.splice(sim.i,1); sim.i = Math.min(sim.i, sim.qs.length-1); return sim.qs.length ? V.sim() : simEnd(); }
+  const multi = q.r.length > 1, sel = Array.isArray(s.a) ? s.a : (s.a === null ? [] : [s.a]);
+  app(`<div class="row" style="justify-content:space-between"><span class="timer">⏱ <span id="tm"></span></span><span class="small muted">${answered}/${N} beantwortet</span></div>
+  <div class="card" style="margin-top:10px"><span class="small muted">Frage ${sim.i+1} von ${N}${multi?" · mehrere richtig":""}</span><div class="q">${esc(q.f)}</div>
+  ${s.perm.map((oi,k) => `<button class="opt ${sel.includes(oi)?"sel":""}" onclick="simPick(${oi},${multi})">${String.fromCharCode(65+k)}) ${esc(q.o[oi])}</button>`).join("")}
+  <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn" onclick="sim.i--;V.sim()" ${sim.i?"":"disabled"}>← Zurück</button>
+  <button class="btn ${sim.i<N-1?"p":""}" onclick="sim.i++;V.sim()" ${sim.i<N-1?"":"disabled"}>Weiter →</button></div></div>
+  <div class="card"><div class="grid50">${sim.qs.map((x,k) => `<button class="${x.a!==null?"a":""} ${k===sim.i?"c":""}" onclick="sim.i=${k};V.sim()">${k+1}</button>`).join("")}</div>
+  <div class="row" style="margin-top:12px"><button class="btn p" onclick="askAbgabe()">Abgeben</button></div><div id="abg"></div></div>`);
+  simTick();
+};
+window.simPick = (oi, multi) => { const s = sim.qs[sim.i]; if (!multi){ s.a = oi; } else { const sel = Array.isArray(s.a) ? s.a : []; s.a = sel.includes(oi) ? sel.filter(x => x !== oi) : sel.concat(oi); if (!s.a.length) s.a = null; } V.sim(); };
+window.askAbgabe = () => { const open = sim.qs.filter(x => x.a === null).length; $("#abg").innerHTML = `<div class="confirm">${open ? `Noch ${open} Fragen offen. ` : ""}Prüfung abgeben?<div class="row" style="margin-top:8px"><button class="btn p" onclick="simEnd()">Ja, abgeben</button><button class="btn sm" onclick="$('#abg').innerHTML=''">Weiter bearbeiten</button></div></div>`; };
+window.simEnd = () => {
+  if (!sim || sim.done) return; sim.done = true; clearInterval(timerH); timerH = null; $("#hdr").textContent = "";
+  const m = byId(), l = L(), N = sim.qs.length;
+  const detail = sim.qs.map(x => { const q = m[x.id]; const sel = Array.isArray(x.a) ? x.a : (x.a === null ? [] : [x.a]); return {id:x.id, t:q ? q.t : "", a:sel, ok: !!q && sel.length === q.r.length && sel.every(i => q.r.includes(i))}; });
+  const ok = detail.filter(d => d.ok).length, pct = N ? Math.round(1000*ok/N)/10 : 0;
+  detail.filter(d => !d.ok).forEach(d => l.fehler[d.id] = 0);
+  const res = {t:Date.now(), n:N, ok, pct, dauer: Math.round((Date.now()-sim.start)/1000), detail};
+  l.sims.push(res); save(); go("simres", res);
+};
+V.simres = r => {
+  r = r || L().sims[L().sims.length-1]; const m = byId(), by = {};
+  r.detail.forEach(d => { by[d.t] = by[d.t] || {n:0, ok:0}; by[d.t].n++; if (d.ok) by[d.t].ok++; });
+  app(`<div class="card"><h2 style="margin-top:0">${r.ok} von ${r.n} richtig (${r.pct} %)</h2>
+  <p class="muted small">Dauer ${Math.round(r.dauer/60)} min. Falsche Antworten wurden in die Fehlerliste übernommen.</p>
+  <div class="tw"><table><tr><th>Thema</th><th class="n">richtig</th><th class="n">Quote</th></tr>${Object.entries(by).sort((a,b)=>a[1].ok/a[1].n-b[1].ok/b[1].n).map(([t,s]) => `<tr><td>${esc(t||"ohne Thema")}</td><td class="n">${s.ok}/${s.n}</td><td class="n">${Math.round(100*s.ok/s.n)} %</td></tr>`).join("")}</table></div></div>
+  <h3>Durchsicht</h3>${r.detail.map((d,k) => { const q = m[d.id]; if (!q) return ""; const sel = Array.isArray(d.a) ? d.a : (d.a === null ? [] : [d.a]); return `<div class="card small"><b>${k+1}. ${esc(q.f)}</b>
+   ${q.o.map((o,i) => `<div class="${q.r.includes(i)?"ok-t":sel.includes(i)?"bad-t":"muted"}">${q.r.includes(i)?"✓":sel.includes(i)?"✗":"·"} ${esc(o)}</div>`).join("")}${!sel.length?'<div class="bad-t">nicht beantwortet</div>':""}${q.e?`<div class="muted" style="margin-top:4px">${esc(q.e)}</div>`:""}</div>`; }).join("")}
+  <button class="btn" onclick="go('pruefung')">Zurück</button>`);
+};
+
+/* ---------- Mehr ---------- */
+V.mehr = () => app(`<h2>Mehr</h2><div class="card list">
+  <button class="item" onclick="go('stat')"><span>Schwachstellen &amp; Statistik</span><span></span></button>
+  <button class="item" onclick="go('daten')"><span>Daten: Fragenpaket &amp; Lernstand sichern, importieren</span><span></span></button>
+  <button class="item" onclick="go('neu')"><span>Neuen Stoff anlegen</span><span></span></button>
+  <button class="item" onclick="go('hilfe')"><span>So funktioniert die App</span><span></span></button></div>`);
+V.hilfe = () => app(`<button class="btn sm" onclick="go('mehr')">← Mehr</button><h2>So funktioniert die App</h2><div class="card prose">
+  <p style="margin-top:0"><b>Offline.</b> Nach dem ersten Öffnen läuft alles auf diesem Gerät: PDF-Lesen, Texterkennung für Fotos und Screenshots, Fragenerzeugung, Lernen. Kein Server, keine KI im Netz. Die Daten liegen nur in diesem Browser.</p>
+  <p><b>Fragen erzeugen.</b> Die App sucht im Text zuerst nach vorhandenen Prüfungsfragen (Frage mit Antwortmöglichkeiten a/b/c, Kästchen, Lösungsangabe) und übernimmt sie. Aus Fließtext baut sie Definitionsfragen („Was ist …?“), Aufzählungen („Nenne alle …“), Lückentexte und Zahlenfragen; falsche Antwortmöglichkeiten kommen aus demselben Text. Überschriften werden zu Themen.</p>
+  <p><b>Editor.</b> Weil Regeln keinen Verstand haben, lohnt der Blick in den Editor: unpassende Fragen löschen, Texte glätten, bei Prüfungsfragen ohne Lösungsangabe die richtige Antwort ankreuzen. Fragen ohne Kreuz werden nicht abgefragt.</p>
+  <p><b>Lernen.</b> Karten folgen dem SM-2-Verfahren: nach jeder Bewertung rückt die nächste Wiederholung weiter in die Zukunft, bei „Nochmal“ kommt die Karte in 10 Minuten wieder. Fragen wandern bei Fehlern in die Fehlerliste und verlassen sie nach zwei richtigen Antworten in Folge. Die Simulation mischt Fragen über alle Themen und wertet erst am Ende aus.</p>
+  <p><b>Fotos.</b> Gut ausgeleuchtet, gerade, scharf, eine Seite je Foto. Die Texterkennung braucht beim ersten Mal einige Sekunden zum Vorbereiten und je Seite etwa 5–20 Sekunden.</p></div>`);
+V.stat = () => {
+  const s = stoff(), l = L();
+  const themen = [...new Set(s.mc.map(q => q.t))];
+  const weak = themen.map(t => ({t, s: themaStat(t)})).filter(r => r.s.n).sort((a,b) => (1-b.s.ok/b.s.n) - (1-a.s.ok/a.s.n));
+  const hart = s.karten.filter(c => l.cards[c.id] && l.cards[c.id].lapses >= 2).sort((a,b)=>l.cards[b.id].lapses-l.cards[a.id].lapses).slice(0,15);
+  const days = Object.keys(l.log).sort().slice(-14);
+  const tot = {k: Object.keys(l.cards).length, f: Object.values(l.mc).reduce((a,m)=>a+m.n,0), ok: Object.values(l.mc).reduce((a,m)=>a+m.ok,0)};
+  app(`<h2>Schwachstellen</h2><div class="card tw">${weak.length ? `<table><tr><th>Thema</th><th class="n">Fehlerquote</th><th class="n">beantwortet</th><th></th></tr>${weak.map(r => `<tr><td>${esc(r.t||"ohne Thema")}</td><td class="n">${Math.round(100*(1-r.s.ok/r.s.n))} %</td><td class="n">${r.s.n}</td><td><button class="btn sm" onclick="startMC({t:'${esc(r.t).replace(/'/g,"")}',n:20})">üben</button></td></tr>`).join("")}</table>` : '<p class="muted">Noch keine Fragen beantwortet.</p>'}</div>
+  ${hart.length ? `<div class="card"><h3 style="margin-top:0">Karten, die oft vergessen werden</h3><ul class="small">${hart.map(c => `<li>${esc(c.f)} <span class="muted">(${l.cards[c.id].lapses}×)</span></li>`).join("")}</ul></div>` : ""}
+  <h2>Statistik</h2><div class="kpi"><div><span class="muted small">Karten begonnen</span><b>${tot.k}/${s.karten.length}</b></div><div><span class="muted small">Fragen beantwortet</span><b>${tot.f}</b></div><div><span class="muted small">davon richtig</span><b>${tot.f?Math.round(100*tot.ok/tot.f)+" %":"–"}</b></div></div>
+  <div class="card" style="margin-top:14px"><h3 style="margin-top:0">Letzte 14 Lerntage</h3>${days.length ? `<table><tr><th>Tag</th><th class="n">Karten</th><th class="n">Fragen</th></tr>${days.reverse().map(d => `<tr><td>${new Date(d).toLocaleDateString("de-DE")}</td><td class="n">${l.log[d].karten||0}</td><td class="n">${l.log[d].fragen||0}</td></tr>`).join("")}</table>` : '<p class="muted">Noch nichts.</p>'}</div>`);
+};
+V.daten = () => app(`<h2>Daten</h2>
+  <div class="card prose"><h3 style="margin-top:0">Fragenpaket</h3><p>Ein Fragenpaket enthält Karten und Fragen eines Stoffs (ohne Lernstand). Damit lässt sich ein Stoff auf ein anderes Gerät bringen oder weitergeben. Beim Import entsteht ein neuer Stoff, oder die Fragen werden einem gleichnamigen hinzugefügt.</p>
+  <div class="row"><button class="btn p" onclick="exportStoff()" ${stoff()?"":"disabled"}>Aktuellen Stoff exportieren</button><label class="btn" for="impP">Fragenpaket importieren …</label><input type="file" id="impP" accept="application/json,.json" hidden onchange="importPaket(this.files[0])"></div>
+  <details class="small muted" style="margin-top:10px"><summary>Format für selbst erstellte Pakete</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{"stofftrainer":1,"name":"Fahrradprüfung",
+ "karten":[{"t":"Thema","f":"Frage","a":"Antwort"}],
+ "mc":[{"t":"Thema","f":"Frage","o":["A","B","C","D"],"r":0,"e":"Erklärung"}]}</pre></details></div>
+  <div class="card prose"><h3 style="margin-top:0">Alles sichern</h3><p>Alle Stoffe samt Lernstand als Datei. Der Import ersetzt den gesamten Bestand in diesem Browser.</p>
+  <div class="row"><button class="btn" onclick="exportAll()">Alles exportieren</button><label class="btn" for="impA">Sicherung importieren …</label><input type="file" id="impA" accept="application/json,.json" hidden onchange="importAll(this.files[0])"></div></div>`);
+function saveFile(fn, json){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([json], {type:"application/json"})); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9äöüß]+/g,"-").replace(/^-|-$/g,"").slice(0,40) || "stoff";
+window.exportStoff = () => { const s = stoff(); if (!s) return; saveFile("stofftrainer-" + slug(s.name) + ".json", JSON.stringify({stofftrainer:1, name:s.name, karten:s.karten.map(({f,a,t})=>({t,f,a})), mc:s.mc.map(({f,o,r,e,t})=>({t,f,o,r,e}))}, null, 1)); };
+window.exportAll = () => saveFile("stofftrainer-sicherung-" + new Date().toISOString().slice(0,10) + ".json", JSON.stringify(S, null, 1));
+function readJson(f, cb){ if (!f) return; const r = new FileReader(); r.onload = () => { try { cb(JSON.parse(r.result)); } catch(e){ toast("Datei ist kein gültiges JSON."); } }; r.readAsText(f); }
+window.importPaket = f => readJson(f, j => {
+  if (!j || (!Array.isArray(j.karten) && !Array.isArray(j.mc))){ toast("Kein Fragenpaket."); return; }
+  const name = String(j.name || "Importiert").slice(0,60);
+  let s = Object.values(S.stoffe).find(x => x.name === name);
+  if (!s){ const id = uid(); s = S.stoffe[id] = {id, name, erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; }
+  const src = uid(); s.quellen.push({id:src, name:"Import " + (f.name||""), zeichen:0});
+  let nk = 0, nq = 0;
+  for (const k of j.karten || []){ if (!k || !k.f || !k.a) continue; const id = hid("k", k.f); if (s.karten.some(x=>x.id===id)) continue; s.karten.push({id, f:String(k.f), a:String(k.a), t:String(k.t||""), art:"import", src}); nk++; }
+  for (const q of j.mc || []){ if (!q || !q.f || !Array.isArray(q.o)) continue; const r = (Array.isArray(q.r) ? q.r : [q.r]).map(Number).filter(x => x >= 0 && x < q.o.length);
+    const id = hid("q", q.f); if (s.mc.some(x=>x.id===id)) continue; s.mc.push({id, f:String(q.f), o:q.o.map(String), r, e:String(q.e||""), t:String(q.t||""), art:"import", src}); nq++; }
+  S.aktiv = s.id; save(); toast(`${nk} Karten, ${nq} Fragen in „${s.name}“ importiert.`); go("start");
+});
+window.importAll = f => readJson(f, j => { if (!j || !j.stoffe){ toast("Keine Sicherung des Stofftrainers."); return; } S = Object.assign(fresh(), j); if (!S.stoffe[S.aktiv]) S.aktiv = Object.keys(S.stoffe)[0] || ""; save(); toast("Sicherung importiert."); go("start"); });
+
+/* ---------- Service Worker ---------- */
+if ("serviceWorker" in navigator && location.protocol !== "file:"){
+  navigator.serviceWorker.register("sw.js").then(reg => {
+    reg.addEventListener("updatefound", () => { const nw = reg.installing; nw && nw.addEventListener("statechange", () => { if (nw.state === "installed" && navigator.serviceWorker.controller) $("#upd").hidden = false; }); });
+  }).catch(() => {});
+}
+Object.assign(window, {go, V, L, stoff});
+go(stoff() ? "start" : "neu");
+</script>
+</body>
+</html>
