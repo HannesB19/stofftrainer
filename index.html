@@ -115,10 +115,10 @@ const shuffle = a => { for (let i = a.length-1; i > 0; i--){ const j = Math.floo
 
 /* ---------- Zustand ---------- */
 function freshLern(){ return {cards:{}, mc:{}, fehler:{}, sims:[], pruefung:"", neuProTag:20, log:{}}; }
-function fresh(){ return {v:1, aktiv:"", stoffe:{}, simN:20, simMin:30}; }
+function fresh(){ return {v:1, aktiv:"", stoffe:{}, simN:20, simMin:30, uiLang:"de"}; }
 let S;
 try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || "{}")); } catch(e) { S = fresh(); }
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { toast("Speichern im Browser nicht möglich (Speicher voll oder gesperrt)."); } }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { toast(t("saveErr")); } }
 const stoff = () => S.stoffe[S.aktiv] || null;
 const L = () => { const s = stoff(); if (!s.lern) s.lern = freshLern(); return s.lern; };
 const byId = () => { const s = stoff(), m = {}; if (s){ s.karten.forEach(c => m[c.id] = c); s.mc.forEach(q => m[q.id] = q); } return m; };
@@ -127,7 +127,232 @@ function logToday(k){ const l = L(), d = new Date().toISOString().slice(0,10); l
 function toast(msg){ let t = $("#toast"); if (!t){ t = document.createElement("div"); t.id = "toast"; t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:20;max-width:90vw;font-size:.92rem"; document.body.appendChild(t); }
   t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 4000); }
 
-/* ---------- Mutmachsprüche (folgen der Stoffsprache) ---------- */
+/* ---------- App-Sprache (Bedienoberfläche) ---------- */
+const T = {
+  de: {
+    appTitle:"Stofftrainer", selAria:"Stoff wählen", tab_start:"Start", tab_stoff:"Stoff", tab_karten:"Karten", tab_fragen:"Fragen", tab_pruefung:"Prüfung", tab_mehr:"Mehr",
+    newOpt:"+ Neuer Stoff …", upd:"Neue Version verfügbar – ", reload:"Neu laden", saveErr:"Speichern im Browser nicht möglich (Speicher voll oder gesperrt).",
+    allTopics:"Alle Themen", day: n => n + (n === 1 ? " Tag" : " Tage"), loc:"de-DE",
+    lang_de:"Deutsch", lang_en:"Englisch", lang_ml:"Malayalam",
+    welcome:"Willkommen", newStoff:"Neuer Stoff",
+    neuIntro:"Ein Stoff ist ein Thema, das du lernen willst: Fahrradprüfung, Erste Hilfe, Biologie 7, Führerschein-Theorie. Du lädst Unterlagen hoch (PDF, Fotos, Screenshots oder Text), die App liest sie aus, erzeugt Lernkarten und Fragen und fragt dich ab. Alles passiert auf diesem Gerät, ohne Internet.",
+    neuName:"Name des Stoffs", neuPh:"z. B. Fahrradprüfung 4. Klasse", neuLang:"Sprache des Stoffs",
+    neuHint:"Die Sprache steuert Texterkennung und Fragenerzeugung. Die Sprache der Bedienung stellst du unter Mehr → Einstellungen ein.",
+    create:"Anlegen", cancel:"Abbrechen", neuPkg:"<b>Fertige Fragen vorhanden?</b> Unter Mehr → Daten lässt sich ein Fragenpaket (JSON) importieren.",
+    kSicher:(a,b) => a + "/" + b + " Karten sicher", pctRight: p => p + " % richtig", noQYet:"noch keine Fragen",
+    emptyStart:"Noch keine Fragen. Lade unter <b>Stoff</b> Unterlagen hoch und lass Fragen erzeugen.", uploadStoff:"Stoff hochladen", today:"heute",
+    noteOpen: n => n + " Frage" + (n === 1 ? "" : "n") + " ohne markierte richtige Antwort. ", noteLink:"Im Editor festlegen", noteSuffix:", dann werden sie abgefragt.",
+    kpiDue:"Fällige Wiederholungen", kpiNew:"Neue Karten heute", kpiErr:"Fehlerliste", kpiExam:"Prüfung", days: n => n + " Tage", over:"vorbei",
+    learnBtn: n => "Karten lernen (" + n + ")", q10:"10 Fragen", practiceErr:"Fehlerliste üben",
+    summary:(k,q,s) => k + " Karten, " + q + " Fragen aus " + s + " Quelle" + (s === 1 ? "" : "n") + ".",
+    spreadHint:" Neue Karten werden so verteilt, dass die letzten Tage vor der Prüfung der Wiederholung dienen.",
+    examDate:"Prüfungsdatum", newPerDay:"Neue Karten/Tag", lastSim:"Letzte Prüfungssimulation: ", progress:"Fortschritt je Thema",
+    stoffSuffix:"Stoff", addDocs:"Unterlagen hinzufügen", dropHere:"Dateien hierher ziehen", dropSub:"PDF, Foto oder Screenshot (JPG, PNG, WebP). Fotos werden per Texterkennung gelesen.",
+    chooseFiles:"Dateien wählen …", takePhoto:"Foto aufnehmen", orPaste:"Oder Text einfügen", pastePh:"Text aus einem Buch, einer Webseite oder deinen Notizen …",
+    labelPh:"Bezeichnung (optional)", takeText:"Text übernehmen", readyGen:"Bereit zum Erzeugen", cardsPerSrc:"Karten je Quelle (max.)", mcPerSrc:"MC-Fragen je Quelle (max.)",
+    generate:"Fragen erzeugen", genHint:"Erkannte Prüfungsfragen aus dem Text werden immer übernommen; die Zahlen begrenzen nur die zusätzlich erzeugten Lückentext-, Zahlen- und Definitionsfragen. Danach im Editor durchsehen.",
+    srcTitle:"Quellen in diesem Stoff", chars: k => k + " k Zeichen", srcCounts:(k,q) => k + " Karten · " + q + " Fragen", editor:"Editor", remove:"Entfernen", noneYet:"Noch keine.",
+    allInEditor:"Alle Fragen im Editor", manualQ:"Frage von Hand anlegen", manage:"Stoff verwalten", lang:"Sprache", toastLang: n => "Sprache: " + n,
+    rename:"Umbenennen", exportPkg:"Als Fragenpaket exportieren", delStoff:"Stoff löschen", showText:"Text ansehen", back:"← Zurück",
+    ocrEditHint:"Erkannter Text. Du kannst ihn hier korrigieren, bevor Fragen erzeugt werden.", apply:"Übernehmen",
+    moreText:"Bitte etwas mehr Text (mindestens 40 Zeichen).", textFrom: d => "Text vom " + d, waitFile:"Bitte warten, eine Datei wird noch gelesen.",
+    unsupported: n => "Nicht unterstützt: " + n, cantRead:(n,m) => "Konnte " + n + " nicht lesen: " + m,
+    ocrImg:(i,n) => "Texterkennung Bild " + i + "/" + n + " …", ocrImgP:(i,n,p) => "Texterkennung Bild " + i + "/" + n + " … " + p + " %",
+    littleText:"Auf den Bildern wurde kaum Text erkannt.", nImages:(n,f) => n + " Bilder (" + f + " …)", fromOcr:"aus Texterkennung – bitte prüfen",
+    noPdfLib:"PDF-Bibliothek fehlt", reading: f => "Lese " + f + " …", readingPage:(f,i,n) => "Lese " + f + " … Seite " + i + "/" + n,
+    ocrPage:(f,i,k,n,p) => "Texterkennung " + f + " Seite " + i + " (" + k + "/" + n + ") … " + p + " %", noText:"kein Text gefunden",
+    pagesOcr:(n,more) => n + " Seite(n) per Texterkennung" + (more ? " (nur die ersten 60)" : ""),
+    noOcr:"Texterkennung nicht verfügbar", ocrPrep:"Texterkennung wird vorbereitet (einmalig je Sprache) …",
+    added:(k,q,o) => k + " Karten und " + q + " Fragen hinzugefügt." + (o ? " " + o + " Fragen brauchen noch die richtige Antwort." : ""),
+    save:"Speichern", confirmDel: n => "Stoff „" + n + "“ mit allen Fragen und dem Lernstand löschen? Das lässt sich nicht rückgängig machen.", yesDel:"Ja, löschen",
+    manualSrc:"Von Hand angelegt",
+    art_vorhanden:"aus dem Text", art_definition:"Definition", art_aufzaehlung:"Aufzählung", art_luecke:"Lückentext", art_zahl:"Zahlenfrage", art_manuell:"von Hand", art_import:"Import",
+    edTitle:"Fragen-Editor", edHint: n => n + " Einträge. Änderungen werden beim Verlassen eines Feldes gespeichert. Bei MC-Fragen die richtige(n) Antwort(en) ankreuzen; Fragen ohne Kreuz werden nicht abgefragt. Gelb markierte brauchen noch eine Lösung.",
+    allSources:"Alle Quellen", onlyTodo:"Nur ohne Lösung", newMC:"+ Neue MC-Frage", newCard:"+ Neue Karte", nothing:"Nichts zu zeigen.",
+    noTopic:"ohne Thema", del:"Löschen", phQ:"Frage", ariaRight:"richtig", phExpl:"Erklärung (optional)", phTopic:"Thema", cardTag:"Karte", phA:"Antwort",
+    kartenTitle:"Lernkarten", kartenHint:"Frage lesen, Antwort im Kopf formulieren, aufdecken, ehrlich bewerten. Was sitzt, kommt seltener dran.", learn:"Lernen",
+    thTopic:"Thema", thDue:"fällig", thNew:"neu", thTotal:"gesamt", noCards:"Noch keine Karten. Unter Stoff Unterlagen hochladen.",
+    doneTitle:"Für jetzt erledigt", noDue: inT => "Keine fälligen Karten " + (inT ? "in diesem Thema " : "") + "mehr. Morgen geht es weiter.", backPlain:"Zurück", more10:"10 weitere neue Karten",
+    quit:"← Beenden", left: n => "noch " + n, tagNew:"neu", rates:["Nochmal","Schwer","Gut","Leicht"], showAns:"Antwort zeigen", keysHint:"Tastatur: Leertaste = aufdecken, 1–4 = bewerten.",
+    fragenTitle:"Fragen trainieren", fragenHint:"Multiple-Choice mit sofortiger Erklärung. Falsch beantwortete Fragen landen in der Fehlerliste und bleiben dort, bis sie zweimal hintereinander richtig beantwortet wurden.",
+    startBtn:"Starten", errList: n => "Fehlerliste (" + n + ")", empty:"Leer.", avail:(n,m) => n + " Fragen abfragbar" + (m ? ", " + m + " ohne Lösung (Editor)" : "") + ".",
+    roundDone:"Runde beendet", roundRes:(ok,n) => ok + " von " + n + " richtig.", newRound:"Neue Runde", multiHint:"Mehrere Antworten richtig – alle auswählen, dann prüfen.", check:"Prüfen",
+    errState: n => " · Fehlerliste " + n + "/2", right:"Richtig.", wrong:"Nicht richtig.", next:"Weiter",
+    simTitle:"Prüfungssimulation", simHint:"Wie in einer echten Prüfung: Fragen gemischt über alle Themen, Rückmeldung erst am Ende, Zeit läuft. Falsche Antworten landen danach in der Fehlerliste.",
+    qs:"Fragen", mins:"Minuten", simAvail:(n,all) => n + " Fragen verfügbar" + (all ? ", die Simulation nutzt alle " + n : "") + ".", resume:"Laufende Simulation fortsetzen", simStart:"Simulation starten",
+    history:"Verlauf", thDate:"Datum", thRight:"richtig", thRate:"Quote", thDur:"Dauer", noSim:"Noch keine Simulation.",
+    answered:(a,n) => a + "/" + n + " beantwortet", qOf:(i,n) => "Frage " + i + " von " + n, multiShort:" · mehrere richtig", nextArrow:"Weiter →", submit:"Abgeben",
+    openQ: n => "Noch " + n + " Fragen offen. ", submitQ:"Prüfung abgeben?", yesSubmit:"Ja, abgeben", keepEdit:"Weiter bearbeiten",
+    resTitle:(ok,n,p) => ok + " von " + n + " richtig (" + p + " %)", duration: m => "Dauer " + m + " min. Falsche Antworten wurden in die Fehlerliste übernommen.", review:"Durchsicht", notAnswered:"nicht beantwortet",
+    mehrTitle:"Mehr", settings:"Einstellungen", uiLang:"App-Sprache", toastUi:"App-Sprache: Deutsch",
+    m_stat:"Schwachstellen &amp; Statistik", m_daten:"Daten: Fragenpaket &amp; Lernstand sichern, importieren", m_neu:"Neuen Stoff anlegen", m_hilfe:"So funktioniert die App", backMehr:"← Mehr",
+    hilfeHtml:`<p style="margin-top:0"><b>Offline.</b> Nach dem ersten Öffnen läuft alles auf diesem Gerät: PDF-Lesen, Texterkennung für Fotos und Screenshots, Fragenerzeugung, Lernen. Kein Server, keine KI im Netz. Die Daten liegen nur in diesem Browser.</p>
+  <p><b>Fragen erzeugen.</b> Die App sucht im Text zuerst nach vorhandenen Prüfungsfragen (Frage mit Antwortmöglichkeiten a/b/c, Kästchen, Lösungsangabe) und übernimmt sie. Aus Fließtext baut sie Definitionsfragen („Was ist …?“), Aufzählungen („Nenne alle …“), Lückentexte und Zahlenfragen; falsche Antwortmöglichkeiten kommen aus demselben Text. Überschriften werden zu Themen.</p>
+  <p><b>Editor.</b> Weil Regeln keinen Verstand haben, lohnt der Blick in den Editor: unpassende Fragen löschen, Texte glätten, bei Prüfungsfragen ohne Lösungsangabe die richtige Antwort ankreuzen. Fragen ohne Kreuz werden nicht abgefragt.</p>
+  <p><b>Lernen.</b> Karten folgen dem SM-2-Verfahren: nach jeder Bewertung rückt die nächste Wiederholung weiter in die Zukunft, bei „Nochmal“ kommt die Karte in 10 Minuten wieder. Fragen wandern bei Fehlern in die Fehlerliste und verlassen sie nach zwei richtigen Antworten in Folge. Die Simulation mischt Fragen über alle Themen und wertet erst am Ende aus.</p>
+  <p><b>Sprache.</b> Je Stoff wählbar (Deutsch, Englisch oder Malayalam, beim Anlegen oder unter Stoff → Stoff verwalten). Sie bestimmt, welches Sprachpaket die Texterkennung nutzt und nach welchen Mustern Fragen gebaut werden. Die Sprache der Bedienung ist davon unabhängig und wird unter Mehr → Einstellungen gewählt.</p>
+  <p><b>Fotos.</b> Gut ausgeleuchtet, gerade, scharf, eine Seite je Foto. Die Texterkennung braucht beim ersten Mal einige Sekunden zum Vorbereiten und je Seite etwa 5–20 Sekunden.</p>`,
+    weakTitle:"Schwachstellen", thErr:"Fehlerquote", thAnswered:"beantwortet", practice:"üben", noneAnswered:"Noch keine Fragen beantwortet.", forgotten:"Karten, die oft vergessen werden",
+    statTitle:"Statistik", kStarted:"Karten begonnen", kAnswered:"Fragen beantwortet", kRight:"davon richtig", last14:"Letzte 14 Lerntage", thDay:"Tag", thCards:"Karten", thQs:"Fragen", nothingYet:"Noch nichts.",
+    datenTitle:"Daten", pkgTitle:"Fragenpaket", pkgText:"Ein Fragenpaket enthält Karten und Fragen eines Stoffs (ohne Lernstand). Damit lässt sich ein Stoff auf ein anderes Gerät bringen oder weitergeben. Beim Import entsteht ein neuer Stoff, oder die Fragen werden einem gleichnamigen hinzugefügt.",
+    exportCur:"Aktuellen Stoff exportieren", importPkg:"Fragenpaket importieren …", formatSum:"Format für selbst erstellte Pakete",
+    backupTitle:"Alles sichern", backupText:"Alle Stoffe samt Lernstand als Datei. Der Import ersetzt den gesamten Bestand in diesem Browser.", exportAll:"Alles exportieren", importBackup:"Sicherung importieren …",
+    badJson:"Datei ist kein gültiges JSON.", notPkg:"Kein Fragenpaket.", importedName:"Importiert", importSrc:"Import ", imported:(k,q,n) => k + " Karten, " + q + " Fragen in „" + n + "“ importiert.",
+    notBackup:"Keine Sicherung des Stofftrainers.", backupOk:"Sicherung importiert."
+  },
+  en: {
+    appTitle:"Stofftrainer", selAria:"Choose subject", tab_start:"Home", tab_stoff:"Subject", tab_karten:"Cards", tab_fragen:"Questions", tab_pruefung:"Exam", tab_mehr:"More",
+    newOpt:"+ New subject …", upd:"New version available – ", reload:"Reload", saveErr:"Can't save in this browser (storage full or blocked).",
+    allTopics:"All topics", day: n => n + (n === 1 ? " day" : " days"), loc:"en-GB",
+    lang_de:"German", lang_en:"English", lang_ml:"Malayalam",
+    welcome:"Welcome", newStoff:"New subject",
+    neuIntro:"A subject is something you want to learn: cycling test, first aid, Year 7 biology, driving theory. You upload material (PDFs, photos, screenshots or text), the app reads it, creates flashcards and questions and quizzes you. Everything happens on this device, no internet needed.",
+    neuName:"Subject name", neuPh:"e.g. Cycling test, Year 4", neuLang:"Subject language",
+    neuHint:"The language controls text recognition and question generation. The app's own language is set under More → Settings.",
+    create:"Create", cancel:"Cancel", neuPkg:"<b>Already have questions?</b> Import a question pack (JSON) under More → Data.",
+    kSicher:(a,b) => a + "/" + b + " cards mastered", pctRight: p => p + " % correct", noQYet:"no questions yet",
+    emptyStart:"No questions yet. Upload material under <b>Subject</b> and generate questions.", uploadStoff:"Upload material", today:"today",
+    noteOpen: n => n + " question" + (n === 1 ? "" : "s") + " without a marked correct answer. ", noteLink:"Set it in the editor", noteSuffix:" and they'll be included.",
+    kpiDue:"Reviews due", kpiNew:"New cards today", kpiErr:"Error list", kpiExam:"Exam", days: n => n + " days", over:"past",
+    learnBtn: n => "Study cards (" + n + ")", q10:"10 questions", practiceErr:"Practise error list",
+    summary:(k,q,s) => k + " cards, " + q + " questions from " + s + " source" + (s === 1 ? "" : "s") + ".",
+    spreadHint:" New cards are spread out so the last days before the exam are kept for review.",
+    examDate:"Exam date", newPerDay:"New cards/day", lastSim:"Last exam simulation: ", progress:"Progress by topic",
+    stoffSuffix:"Material", addDocs:"Add material", dropHere:"Drag files here", dropSub:"PDF, photo or screenshot (JPG, PNG, WebP). Photos are read with text recognition.",
+    chooseFiles:"Choose files …", takePhoto:"Take photo", orPaste:"Or paste text", pastePh:"Text from a book, a website or your notes …",
+    labelPh:"Label (optional)", takeText:"Add text", readyGen:"Ready to generate", cardsPerSrc:"Cards per source (max.)", mcPerSrc:"MC questions per source (max.)",
+    generate:"Generate questions", genHint:"Exam questions found in the text are always included; the numbers only limit the extra gap-fill, number and definition questions. Review them in the editor afterwards.",
+    srcTitle:"Sources in this subject", chars: k => k + "k characters", srcCounts:(k,q) => k + " cards · " + q + " questions", editor:"Editor", remove:"Remove", noneYet:"None yet.",
+    allInEditor:"All questions in editor", manualQ:"Add question manually", manage:"Manage subject", lang:"Language", toastLang: n => "Language: " + n,
+    rename:"Rename", exportPkg:"Export as question pack", delStoff:"Delete subject", showText:"View text", back:"← Back",
+    ocrEditHint:"Recognised text. You can correct it here before questions are generated.", apply:"Apply",
+    moreText:"Please add a bit more text (at least 40 characters).", textFrom: d => "Text from " + d, waitFile:"Please wait, a file is still being read.",
+    unsupported: n => "Not supported: " + n, cantRead:(n,m) => "Couldn't read " + n + ": " + m,
+    ocrImg:(i,n) => "Recognising image " + i + "/" + n + " …", ocrImgP:(i,n,p) => "Recognising image " + i + "/" + n + " … " + p + " %",
+    littleText:"Hardly any text was found in the images.", nImages:(n,f) => n + " images (" + f + " …)", fromOcr:"from text recognition – please check",
+    noPdfLib:"PDF library missing", reading: f => "Reading " + f + " …", readingPage:(f,i,n) => "Reading " + f + " … page " + i + "/" + n,
+    ocrPage:(f,i,k,n,p) => "Recognising " + f + " page " + i + " (" + k + "/" + n + ") … " + p + " %", noText:"no text found",
+    pagesOcr:(n,more) => n + " page(s) via text recognition" + (more ? " (first 60 only)" : ""),
+    noOcr:"Text recognition not available", ocrPrep:"Preparing text recognition (once per language) …",
+    added:(k,q,o) => k + " cards and " + q + " questions added." + (o ? " " + o + " questions still need the correct answer." : ""),
+    save:"Save", confirmDel: n => "Delete subject “" + n + "” with all questions and progress? This can't be undone.", yesDel:"Yes, delete",
+    manualSrc:"Added manually",
+    art_vorhanden:"from the text", art_definition:"Definition", art_aufzaehlung:"List", art_luecke:"Gap fill", art_zahl:"Number", art_manuell:"manual", art_import:"Import",
+    edTitle:"Question editor", edHint: n => n + " entries. Changes are saved when you leave a field. For MC questions tick the correct answer(s); questions without a tick are not asked. Yellow ones still need an answer.",
+    allSources:"All sources", onlyTodo:"Only without answer", newMC:"+ New MC question", newCard:"+ New card", nothing:"Nothing to show.",
+    noTopic:"no topic", del:"Delete", phQ:"Question", ariaRight:"correct", phExpl:"Explanation (optional)", phTopic:"Topic", cardTag:"Card", phA:"Answer",
+    kartenTitle:"Flashcards", kartenHint:"Read the question, answer in your head, reveal, rate honestly. What you know comes up less often.", learn:"Study",
+    thTopic:"Topic", thDue:"due", thNew:"new", thTotal:"total", noCards:"No cards yet. Upload material under Subject.",
+    doneTitle:"Done for now", noDue: inT => "No more cards due" + (inT ? " in this topic" : "") + ". More tomorrow.", backPlain:"Back", more10:"10 more new cards",
+    quit:"← Finish", left: n => n + " left", tagNew:"new", rates:["Again","Hard","Good","Easy"], showAns:"Show answer", keysHint:"Keyboard: space = reveal, 1–4 = rate.",
+    fragenTitle:"Practise questions", fragenHint:"Multiple choice with instant explanations. Wrong answers go to the error list and stay there until answered correctly twice in a row.",
+    startBtn:"Start", errList: n => "Error list (" + n + ")", empty:"Empty.", avail:(n,m) => n + " questions available" + (m ? ", " + m + " without answer (editor)" : "") + ".",
+    roundDone:"Round complete", roundRes:(ok,n) => ok + " of " + n + " correct.", newRound:"New round", multiHint:"More than one answer is correct – select all, then check.", check:"Check",
+    errState: n => " · error list " + n + "/2", right:"Correct.", wrong:"Not correct.", next:"Next",
+    simTitle:"Exam simulation", simHint:"Like a real exam: questions mixed across all topics, feedback only at the end, the clock is running. Wrong answers go to the error list afterwards.",
+    qs:"Questions", mins:"Minutes", simAvail:(n,all) => n + " questions available" + (all ? ", the simulation uses all " + n : "") + ".", resume:"Resume simulation", simStart:"Start simulation",
+    history:"History", thDate:"Date", thRight:"correct", thRate:"Score", thDur:"Time", noSim:"No simulation yet.",
+    answered:(a,n) => a + "/" + n + " answered", qOf:(i,n) => "Question " + i + " of " + n, multiShort:" · several correct", nextArrow:"Next →", submit:"Submit",
+    openQ: n => n + " questions still open. ", submitQ:"Submit exam?", yesSubmit:"Yes, submit", keepEdit:"Keep working",
+    resTitle:(ok,n,p) => ok + " of " + n + " correct (" + p + " %)", duration: m => "Time " + m + " min. Wrong answers were added to the error list.", review:"Review", notAnswered:"not answered",
+    mehrTitle:"More", settings:"Settings", uiLang:"App language", toastUi:"App language: English",
+    m_stat:"Weak spots &amp; statistics", m_daten:"Data: back up and import question packs &amp; progress", m_neu:"Create new subject", m_hilfe:"How the app works", backMehr:"← More",
+    hilfeHtml:`<p style="margin-top:0"><b>Offline.</b> After the first visit everything runs on this device: reading PDFs, text recognition for photos and screenshots, question generation, studying. No server, no online AI. Your data stays in this browser only.</p>
+  <p><b>Generating questions.</b> The app first looks for existing exam questions in the text (question with options a/b/c, boxes, answer key) and takes them over. From running text it builds definition questions (“What is …?”), lists (“Name all …”), gap fills and number questions; wrong options come from the same text. Headings become topics.</p>
+  <p><b>Editor.</b> Rules have no common sense, so check the editor: delete unsuitable questions, tidy up wording, and tick the correct answer for exam questions without an answer key. Questions without a tick are not asked.</p>
+  <p><b>Studying.</b> Cards follow the SM-2 method: after each rating the next review moves further into the future; with “Again” the card returns in 10 minutes. Wrongly answered questions go to the error list and leave it after two correct answers in a row. The simulation mixes questions across all topics and only scores at the end.</p>
+  <p><b>Language.</b> Each subject has its own language (German, English or Malayalam, set when creating it or under Subject → Manage subject). It decides which language pack text recognition uses and which patterns are used to build questions. The app's own language is separate and is set under More → Settings.</p>
+  <p><b>Photos.</b> Well lit, straight, sharp, one page per photo. Text recognition needs a few seconds to prepare the first time and about 5–20 seconds per page.</p>`,
+    weakTitle:"Weak spots", thErr:"Error rate", thAnswered:"answered", practice:"practise", noneAnswered:"No questions answered yet.", forgotten:"Cards you often forget",
+    statTitle:"Statistics", kStarted:"Cards started", kAnswered:"Questions answered", kRight:"of which correct", last14:"Last 14 study days", thDay:"Day", thCards:"Cards", thQs:"Questions", nothingYet:"Nothing yet.",
+    datenTitle:"Data", pkgTitle:"Question pack", pkgText:"A question pack contains the cards and questions of one subject (without progress). Use it to move a subject to another device or share it. Importing creates a new subject, or adds the questions to one with the same name.",
+    exportCur:"Export current subject", importPkg:"Import question pack …", formatSum:"Format for your own packs",
+    backupTitle:"Back up everything", backupText:"All subjects including progress as one file. Importing replaces everything in this browser.", exportAll:"Export everything", importBackup:"Import backup …",
+    badJson:"File is not valid JSON.", notPkg:"Not a question pack.", importedName:"Imported", importSrc:"Import ", imported:(k,q,n) => k + " cards, " + q + " questions imported into “" + n + "”.",
+    notBackup:"Not a Stofftrainer backup.", backupOk:"Backup imported."
+  },
+  ml: {
+    appTitle:"Stofftrainer", selAria:"പാഠം തിരഞ്ഞെടുക്കുക", tab_start:"ഹോം", tab_stoff:"പാഠം", tab_karten:"കാർഡുകൾ", tab_fragen:"ചോദ്യങ്ങൾ", tab_pruefung:"പരീക്ഷ", tab_mehr:"കൂടുതൽ",
+    newOpt:"+ പുതിയ പാഠം …", upd:"പുതിയ പതിപ്പ് ലഭ്യമാണ് – ", reload:"വീണ്ടും ലോഡ് ചെയ്യുക", saveErr:"ഈ ബ്രൗസറിൽ സേവ് ചെയ്യാൻ കഴിയില്ല (സംഭരണം നിറഞ്ഞു അല്ലെങ്കിൽ തടഞ്ഞു).",
+    allTopics:"എല്ലാ വിഷയങ്ങളും", day: n => n + " ദിവസം", loc:"ml-IN",
+    lang_de:"ജർമ്മൻ", lang_en:"ഇംഗ്ലീഷ്", lang_ml:"മലയാളം",
+    welcome:"സ്വാഗതം", newStoff:"പുതിയ പാഠം",
+    neuIntro:"നിങ്ങൾ പഠിക്കാൻ ആഗ്രഹിക്കുന്ന ഒന്നാണ് പാഠം: സൈക്കിൾ പരീക്ഷ, പ്രഥമശുശ്രൂഷ, ഏഴാം ക്ലാസ് ജീവശാസ്ത്രം, ഡ്രൈവിംഗ് തിയറി. നിങ്ങൾ പഠനസാമഗ്രികൾ (PDF, ഫോട്ടോ, സ്ക്രീൻഷോട്ട് അല്ലെങ്കിൽ ടെക്സ്റ്റ്) അപ്‌ലോഡ് ചെയ്യുന്നു; ആപ്പ് അവ വായിച്ച് കാർഡുകളും ചോദ്യങ്ങളും ഉണ്ടാക്കി നിങ്ങളെ പരീക്ഷിക്കുന്നു. എല്ലാം ഈ ഉപകരണത്തിൽ തന്നെ, ഇന്റർനെറ്റ് ഇല്ലാതെ.",
+    neuName:"പാഠത്തിന്റെ പേര്", neuPh:"ഉദാ: സൈക്കിൾ പരീക്ഷ, നാലാം ക്ലാസ്", neuLang:"പാഠത്തിന്റെ ഭാഷ",
+    neuHint:"ടെക്സ്റ്റ് തിരിച്ചറിയലും ചോദ്യനിർമ്മാണവും ഈ ഭാഷ നിയന്ത്രിക്കുന്നു. ആപ്പിന്റെ ഭാഷ കൂടുതൽ → ക്രമീകരണങ്ങൾ എന്നതിൽ മാറ്റാം.",
+    create:"സൃഷ്ടിക്കുക", cancel:"റദ്ദാക്കുക", neuPkg:"<b>തയ്യാറായ ചോദ്യങ്ങൾ ഉണ്ടോ?</b> കൂടുതൽ → ഡാറ്റ എന്നതിൽ ഒരു ചോദ്യപാക്കേജ് (JSON) ഇമ്പോർട്ട് ചെയ്യാം.",
+    kSicher:(a,b) => a + "/" + b + " കാർഡുകൾ ഉറപ്പായി", pctRight: p => p + " % ശരി", noQYet:"ഇതുവരെ ചോദ്യങ്ങളില്ല",
+    emptyStart:"ഇതുവരെ ചോദ്യങ്ങളില്ല. <b>പാഠം</b> എന്നതിൽ സാമഗ്രികൾ അപ്‌ലോഡ് ചെയ്ത് ചോദ്യങ്ങൾ ഉണ്ടാക്കുക.", uploadStoff:"സാമഗ്രി അപ്‌ലോഡ് ചെയ്യുക", today:"ഇന്ന്",
+    noteOpen: n => "ശരിയുത്തരം അടയാളപ്പെടുത്താത്ത " + n + " ചോദ്യങ്ങൾ. ", noteLink:"എഡിറ്ററിൽ നിശ്ചയിക്കുക", noteSuffix:", അപ്പോൾ അവ ചോദിക്കും.",
+    kpiDue:"ആവർത്തിക്കാനുള്ളവ", kpiNew:"ഇന്നത്തെ പുതിയ കാർഡുകൾ", kpiErr:"തെറ്റുകളുടെ പട്ടിക", kpiExam:"പരീക്ഷ", days: n => n + " ദിവസം", over:"കഴിഞ്ഞു",
+    learnBtn: n => "കാർഡുകൾ പഠിക്കുക (" + n + ")", q10:"10 ചോദ്യങ്ങൾ", practiceErr:"തെറ്റുകൾ പരിശീലിക്കുക",
+    summary:(k,q,s) => s + " ഉറവിടങ്ങളിൽ നിന്ന് " + k + " കാർഡുകൾ, " + q + " ചോദ്യങ്ങൾ.",
+    spreadHint:" പരീക്ഷയ്ക്ക് മുമ്പുള്ള അവസാന ദിവസങ്ങൾ ആവർത്തനത്തിനായി ബാക്കിവെക്കുന്ന വിധത്തിലാണ് പുതിയ കാർഡുകൾ വിതരണം ചെയ്യുന്നത്.",
+    examDate:"പരീക്ഷാ തീയതി", newPerDay:"പുതിയ കാർഡുകൾ/ദിവസം", lastSim:"അവസാന മാതൃകാപരീക്ഷ: ", progress:"വിഷയം തിരിച്ചുള്ള പുരോഗതി",
+    stoffSuffix:"പഠനസാമഗ്രി", addDocs:"സാമഗ്രികൾ ചേർക്കുക", dropHere:"ഫയലുകൾ ഇവിടേക്ക് വലിച്ചിടുക", dropSub:"PDF, ഫോട്ടോ അല്ലെങ്കിൽ സ്ക്രീൻഷോട്ട് (JPG, PNG, WebP). ഫോട്ടോകൾ ടെക്സ്റ്റ് തിരിച്ചറിയൽ വഴി വായിക്കുന്നു.",
+    chooseFiles:"ഫയലുകൾ തിരഞ്ഞെടുക്കുക …", takePhoto:"ഫോട്ടോ എടുക്കുക", orPaste:"അല്ലെങ്കിൽ ടെക്സ്റ്റ് ഒട്ടിക്കുക", pastePh:"പുസ്തകത്തിൽ നിന്നോ വെബ്സൈറ്റിൽ നിന്നോ കുറിപ്പുകളിൽ നിന്നോ ഉള്ള ടെക്സ്റ്റ് …",
+    labelPh:"പേര് (ഐച്ഛികം)", takeText:"ടെക്സ്റ്റ് ചേർക്കുക", readyGen:"നിർമ്മിക്കാൻ തയ്യാർ", cardsPerSrc:"ഓരോ ഉറവിടത്തിനും കാർഡുകൾ (പരമാവധി)", mcPerSrc:"ഓരോ ഉറവിടത്തിനും MC ചോദ്യങ്ങൾ (പരമാവധി)",
+    generate:"ചോദ്യങ്ങൾ ഉണ്ടാക്കുക", genHint:"ടെക്സ്റ്റിൽ കണ്ടെത്തിയ പരീക്ഷാചോദ്യങ്ങൾ എപ്പോഴും ഉൾപ്പെടുത്തും; ഈ എണ്ണങ്ങൾ അധികമായി ഉണ്ടാക്കുന്ന വിട്ടഭാഗം, സംഖ്യ, നിർവചന ചോദ്യങ്ങളെ മാത്രം പരിമിതപ്പെടുത്തുന്നു. ശേഷം എഡിറ്ററിൽ പരിശോധിക്കുക.",
+    srcTitle:"ഈ പാഠത്തിലെ ഉറവിടങ്ങൾ", chars: k => k + "k അക്ഷരങ്ങൾ", srcCounts:(k,q) => k + " കാർഡുകൾ · " + q + " ചോദ്യങ്ങൾ", editor:"എഡിറ്റർ", remove:"നീക്കം ചെയ്യുക", noneYet:"ഇതുവരെ ഒന്നുമില്ല.",
+    allInEditor:"എല്ലാ ചോദ്യങ്ങളും എഡിറ്ററിൽ", manualQ:"ചോദ്യം സ്വയം ചേർക്കുക", manage:"പാഠം കൈകാര്യം ചെയ്യുക", lang:"ഭാഷ", toastLang: n => "ഭാഷ: " + n,
+    rename:"പേര് മാറ്റുക", exportPkg:"ചോദ്യപാക്കേജായി എക്സ്പോർട്ട് ചെയ്യുക", delStoff:"പാഠം ഇല്ലാതാക്കുക", showText:"ടെക്സ്റ്റ് കാണുക", back:"← തിരികെ",
+    ocrEditHint:"തിരിച്ചറിഞ്ഞ ടെക്സ്റ്റ്. ചോദ്യങ്ങൾ ഉണ്ടാക്കുന്നതിന് മുമ്പ് ഇവിടെ തിരുത്താം.", apply:"സ്വീകരിക്കുക",
+    moreText:"ദയവായി കുറച്ചുകൂടി ടെക്സ്റ്റ് നൽകുക (കുറഞ്ഞത് 40 അക്ഷരങ്ങൾ).", textFrom: d => "ടെക്സ്റ്റ് " + d, waitFile:"ദയവായി കാത്തിരിക്കുക, ഒരു ഫയൽ ഇപ്പോഴും വായിക്കുന്നു.",
+    unsupported: n => "പിന്തുണയില്ല: " + n, cantRead:(n,m) => n + " വായിക്കാൻ കഴിഞ്ഞില്ല: " + m,
+    ocrImg:(i,n) => "ചിത്രം " + i + "/" + n + " തിരിച്ചറിയുന്നു …", ocrImgP:(i,n,p) => "ചിത്രം " + i + "/" + n + " തിരിച്ചറിയുന്നു … " + p + " %",
+    littleText:"ചിത്രങ്ങളിൽ ടെക്സ്റ്റ് കാര്യമായി കണ്ടെത്തിയില്ല.", nImages:(n,f) => n + " ചിത്രങ്ങൾ (" + f + " …)", fromOcr:"ടെക്സ്റ്റ് തിരിച്ചറിയലിൽ നിന്ന് – ദയവായി പരിശോധിക്കുക",
+    noPdfLib:"PDF ലൈബ്രറി ലഭ്യമല്ല", reading: f => f + " വായിക്കുന്നു …", readingPage:(f,i,n) => f + " വായിക്കുന്നു … പേജ് " + i + "/" + n,
+    ocrPage:(f,i,k,n,p) => f + " പേജ് " + i + " തിരിച്ചറിയുന്നു (" + k + "/" + n + ") … " + p + " %", noText:"ടെക്സ്റ്റ് കണ്ടെത്തിയില്ല",
+    pagesOcr:(n,more) => n + " പേജ് ടെക്സ്റ്റ് തിരിച്ചറിയൽ വഴി" + (more ? " (ആദ്യ 60 മാത്രം)" : ""),
+    noOcr:"ടെക്സ്റ്റ് തിരിച്ചറിയൽ ലഭ്യമല്ല", ocrPrep:"ടെക്സ്റ്റ് തിരിച്ചറിയൽ തയ്യാറാക്കുന്നു (ഓരോ ഭാഷയ്ക്കും ഒരിക്കൽ) …",
+    added:(k,q,o) => k + " കാർഡുകളും " + q + " ചോദ്യങ്ങളും ചേർത്തു." + (o ? " " + o + " ചോദ്യങ്ങൾക്ക് ഇനിയും ശരിയുത്തരം വേണം." : ""),
+    save:"സേവ് ചെയ്യുക", confirmDel: n => "“" + n + "” എന്ന പാഠം എല്ലാ ചോദ്യങ്ങളും പുരോഗതിയും സഹിതം ഇല്ലാതാക്കണോ? ഇത് പഴയപടിയാക്കാൻ കഴിയില്ല.", yesDel:"അതെ, ഇല്ലാതാക്കുക",
+    manualSrc:"സ്വയം ചേർത്തത്",
+    art_vorhanden:"ടെക്സ്റ്റിൽ നിന്ന്", art_definition:"നിർവചനം", art_aufzaehlung:"പട്ടിക", art_luecke:"വിട്ടഭാഗം പൂരിപ്പിക്കൽ", art_zahl:"സംഖ്യാചോദ്യം", art_manuell:"സ്വയം", art_import:"ഇമ്പോർട്ട്",
+    edTitle:"ചോദ്യ എഡിറ്റർ", edHint: n => n + " എൻട്രികൾ. ഒരു ഫീൽഡ് വിടുമ്പോൾ മാറ്റങ്ങൾ സേവ് ആകും. MC ചോദ്യങ്ങളിൽ ശരിയുത്തരം(ങ്ങൾ) ടിക്ക് ചെയ്യുക; ടിക്ക് ഇല്ലാത്ത ചോദ്യങ്ങൾ ചോദിക്കില്ല. മഞ്ഞ നിറത്തിലുള്ളവയ്ക്ക് ഇനിയും ഉത്തരം വേണം.",
+    allSources:"എല്ലാ ഉറവിടങ്ങളും", onlyTodo:"ഉത്തരമില്ലാത്തവ മാത്രം", newMC:"+ പുതിയ MC ചോദ്യം", newCard:"+ പുതിയ കാർഡ്", nothing:"കാണിക്കാൻ ഒന്നുമില്ല.",
+    noTopic:"വിഷയമില്ല", del:"ഇല്ലാതാക്കുക", phQ:"ചോദ്യം", ariaRight:"ശരി", phExpl:"വിശദീകരണം (ഐച്ഛികം)", phTopic:"വിഷയം", cardTag:"കാർഡ്", phA:"ഉത്തരം",
+    kartenTitle:"പഠനകാർഡുകൾ", kartenHint:"ചോദ്യം വായിക്കുക, ഉത്തരം മനസ്സിൽ പറയുക, തുറന്നു നോക്കുക, സത്യസന്ധമായി വിലയിരുത്തുക. അറിയാവുന്നവ കുറച്ചേ വരൂ.", learn:"പഠിക്കുക",
+    thTopic:"വിഷയം", thDue:"ബാക്കി", thNew:"പുതിയത്", thTotal:"ആകെ", noCards:"ഇതുവരെ കാർഡുകളില്ല. പാഠം എന്നതിൽ സാമഗ്രികൾ അപ്‌ലോഡ് ചെയ്യുക.",
+    doneTitle:"ഇപ്പോഴത്തേക്ക് കഴിഞ്ഞു", noDue: inT => (inT ? "ഈ വിഷയത്തിൽ " : "") + "ഇനി ആവർത്തിക്കാനുള്ള കാർഡുകളില്ല. നാളെ തുടരാം.", backPlain:"തിരികെ", more10:"10 പുതിയ കാർഡുകൾ കൂടി",
+    quit:"← അവസാനിപ്പിക്കുക", left: n => n + " ബാക്കി", tagNew:"പുതിയത്", rates:["വീണ്ടും","പ്രയാസം","നല്ലത്","എളുപ്പം"], showAns:"ഉത്തരം കാണിക്കുക", keysHint:"കീബോർഡ്: സ്പേസ് = തുറക്കുക, 1–4 = വിലയിരുത്തുക.",
+    fragenTitle:"ചോദ്യപരിശീലനം", fragenHint:"ഉടനടി വിശദീകരണത്തോടെയുള്ള മൾട്ടിപ്പിൾ ചോയ്സ്. തെറ്റിയ ചോദ്യങ്ങൾ തെറ്റുകളുടെ പട്ടികയിൽ പോകും; തുടർച്ചയായി രണ്ടുതവണ ശരിയാകുന്നതുവരെ അവിടെ നിൽക്കും.",
+    startBtn:"ആരംഭിക്കുക", errList: n => "തെറ്റുകളുടെ പട്ടിക (" + n + ")", empty:"ശൂന്യം.", avail:(n,m) => n + " ചോദ്യങ്ങൾ ലഭ്യം" + (m ? ", " + m + " എണ്ണത്തിന് ഉത്തരമില്ല (എഡിറ്റർ)" : "") + ".",
+    roundDone:"റൗണ്ട് കഴിഞ്ഞു", roundRes:(ok,n) => n + " ൽ " + ok + " ശരി.", newRound:"പുതിയ റൗണ്ട്", multiHint:"ഒന്നിലധികം ഉത്തരങ്ങൾ ശരിയാണ് – എല്ലാം തിരഞ്ഞെടുത്ത് പരിശോധിക്കുക.", check:"പരിശോധിക്കുക",
+    errState: n => " · തെറ്റുകളുടെ പട്ടിക " + n + "/2", right:"ശരി.", wrong:"ശരിയല്ല.", next:"അടുത്തത്",
+    simTitle:"മാതൃകാപരീക്ഷ", simHint:"യഥാർത്ഥ പരീക്ഷ പോലെ: എല്ലാ വിഷയങ്ങളിൽ നിന്നും കലർത്തിയ ചോദ്യങ്ങൾ, ഫലം അവസാനം മാത്രം, സമയം ഓടുന്നു. തെറ്റിയ ഉത്തരങ്ങൾ പിന്നീട് തെറ്റുകളുടെ പട്ടികയിൽ ചേർക്കും.",
+    qs:"ചോദ്യങ്ങൾ", mins:"മിനിറ്റ്", simAvail:(n,all) => n + " ചോദ്യങ്ങൾ ലഭ്യം" + (all ? ", മാതൃകാപരീക്ഷ എല്ലാ " + n + " എണ്ണവും ഉപയോഗിക്കും" : "") + ".", resume:"നടക്കുന്ന മാതൃകാപരീക്ഷ തുടരുക", simStart:"മാതൃകാപരീക്ഷ ആരംഭിക്കുക",
+    history:"ചരിത്രം", thDate:"തീയതി", thRight:"ശരി", thRate:"ശതമാനം", thDur:"സമയം", noSim:"ഇതുവരെ മാതൃകാപരീക്ഷയില്ല.",
+    answered:(a,n) => a + "/" + n + " ഉത്തരം നൽകി", qOf:(i,n) => "ചോദ്യം " + i + " / " + n, multiShort:" · ഒന്നിലധികം ശരി", nextArrow:"അടുത്തത് →", submit:"സമർപ്പിക്കുക",
+    openQ: n => "ഇനിയും " + n + " ചോദ്യങ്ങൾ ബാക്കി. ", submitQ:"പരീക്ഷ സമർപ്പിക്കണോ?", yesSubmit:"അതെ, സമർപ്പിക്കുക", keepEdit:"തുടർന്ന് ചെയ്യുക",
+    resTitle:(ok,n,p) => n + " ൽ " + ok + " ശരി (" + p + " %)", duration: m => "സമയം " + m + " മിനിറ്റ്. തെറ്റിയ ഉത്തരങ്ങൾ തെറ്റുകളുടെ പട്ടികയിൽ ചേർത്തു.", review:"അവലോകനം", notAnswered:"ഉത്തരം നൽകിയില്ല",
+    mehrTitle:"കൂടുതൽ", settings:"ക്രമീകരണങ്ങൾ", uiLang:"ആപ്പിന്റെ ഭാഷ", toastUi:"ആപ്പിന്റെ ഭാഷ: മലയാളം",
+    m_stat:"ദുർബല ഭാഗങ്ങളും സ്ഥിതിവിവരക്കണക്കുകളും", m_daten:"ഡാറ്റ: ചോദ്യപാക്കേജും പുരോഗതിയും ബാക്കപ്പ്, ഇമ്പോർട്ട്", m_neu:"പുതിയ പാഠം സൃഷ്ടിക്കുക", m_hilfe:"ആപ്പ് എങ്ങനെ പ്രവർത്തിക്കുന്നു", backMehr:"← കൂടുതൽ",
+    hilfeHtml:`<p style="margin-top:0"><b>ഓഫ്‌ലൈൻ.</b> ആദ്യമായി തുറന്നശേഷം എല്ലാം ഈ ഉപകരണത്തിൽ തന്നെ പ്രവർത്തിക്കുന്നു: PDF വായന, ഫോട്ടോകൾക്കും സ്ക്രീൻഷോട്ടുകൾക്കും ടെക്സ്റ്റ് തിരിച്ചറിയൽ, ചോദ്യനിർമ്മാണം, പഠനം. സെർവറില്ല, ഓൺലൈൻ AI ഇല്ല. ഡാറ്റ ഈ ബ്രൗസറിൽ മാത്രം.</p>
+  <p><b>ചോദ്യങ്ങൾ ഉണ്ടാക്കൽ.</b> ആപ്പ് ആദ്യം ടെക്സ്റ്റിൽ നിലവിലുള്ള പരീക്ഷാചോദ്യങ്ങൾ (a/b/c ഓപ്ഷനുകൾ, ബോക്സുകൾ, ഉത്തരസൂചിക) കണ്ടെത്തി എടുക്കുന്നു. സാധാരണ ടെക്സ്റ്റിൽ നിന്ന് നിർവചനചോദ്യങ്ങൾ, പട്ടികകൾ, വിട്ടഭാഗം പൂരിപ്പിക്കൽ, സംഖ്യാചോദ്യങ്ങൾ എന്നിവ ഉണ്ടാക്കുന്നു; തെറ്റായ ഓപ്ഷനുകൾ അതേ ടെക്സ്റ്റിൽ നിന്നാണ്. തലക്കെട്ടുകൾ വിഷയങ്ങളാകും.</p>
+  <p><b>എഡിറ്റർ.</b> നിയമങ്ങൾക്ക് വിവേകമില്ല, അതിനാൽ എഡിറ്റർ നോക്കുന്നത് നല്ലതാണ്: അനുയോജ്യമല്ലാത്ത ചോദ്യങ്ങൾ ഇല്ലാതാക്കുക, വാചകം മെച്ചപ്പെടുത്തുക, ഉത്തരസൂചിക ഇല്ലാത്ത ചോദ്യങ്ങളിൽ ശരിയുത്തരം ടിക്ക് ചെയ്യുക. ടിക്ക് ഇല്ലാത്ത ചോദ്യങ്ങൾ ചോദിക്കില്ല.</p>
+  <p><b>പഠനം.</b> കാർഡുകൾ SM-2 രീതി പിന്തുടരുന്നു: ഓരോ വിലയിരുത്തലിനും ശേഷം അടുത്ത ആവർത്തനം കൂടുതൽ ദൂരേക്ക് നീങ്ങുന്നു; „വീണ്ടും“ എങ്കിൽ കാർഡ് 10 മിനിറ്റിൽ തിരികെ വരും. തെറ്റിയ ചോദ്യങ്ങൾ തെറ്റുകളുടെ പട്ടികയിൽ പോകും, തുടർച്ചയായി രണ്ട് ശരിയുത്തരങ്ങൾക്ക് ശേഷം പുറത്തുപോകും. മാതൃകാപരീക്ഷ എല്ലാ വിഷയങ്ങളിൽ നിന്നും ചോദ്യങ്ങൾ കലർത്തി അവസാനം മാത്രം ഫലം നൽകുന്നു.</p>
+  <p><b>ഭാഷ.</b> ഓരോ പാഠത്തിനും വെവ്വേറെ (ജർമ്മൻ, ഇംഗ്ലീഷ് അല്ലെങ്കിൽ മലയാളം; സൃഷ്ടിക്കുമ്പോഴോ പാഠം → പാഠം കൈകാര്യം ചെയ്യുക എന്നതിലോ). ടെക്സ്റ്റ് തിരിച്ചറിയലിന്റെ ഭാഷാപാക്കേജും ചോദ്യനിർമ്മാണ രീതികളും ഇത് നിശ്ചയിക്കുന്നു. ആപ്പിന്റെ ഭാഷ ഇതിൽ നിന്ന് വേറിട്ടതാണ്, കൂടുതൽ → ക്രമീകരണങ്ങൾ എന്നതിൽ മാറ്റാം.</p>
+  <p><b>ഫോട്ടോകൾ.</b> നല്ല വെളിച്ചം, നേരെ, വ്യക്തമായി, ഒരു ഫോട്ടോയിൽ ഒരു പേജ്. ആദ്യതവണ ടെക്സ്റ്റ് തിരിച്ചറിയൽ തയ്യാറാകാൻ കുറച്ച് സെക്കൻഡ് എടുക്കും, ഓരോ പേജിനും ഏകദേശം 5–20 സെക്കൻഡ്.</p>`,
+    weakTitle:"ദുർബല ഭാഗങ്ങൾ", thErr:"തെറ്റ് ശതമാനം", thAnswered:"ഉത്തരം നൽകിയത്", practice:"പരിശീലിക്കുക", noneAnswered:"ഇതുവരെ ചോദ്യങ്ങൾക്ക് ഉത്തരം നൽകിയിട്ടില്ല.", forgotten:"പലപ്പോഴും മറക്കുന്ന കാർഡുകൾ",
+    statTitle:"സ്ഥിതിവിവരക്കണക്കുകൾ", kStarted:"തുടങ്ങിയ കാർഡുകൾ", kAnswered:"ഉത്തരം നൽകിയ ചോദ്യങ്ങൾ", kRight:"അതിൽ ശരി", last14:"അവസാന 14 പഠനദിവസങ്ങൾ", thDay:"ദിവസം", thCards:"കാർഡുകൾ", thQs:"ചോദ്യങ്ങൾ", nothingYet:"ഇതുവരെ ഒന്നുമില്ല.",
+    datenTitle:"ഡാറ്റ", pkgTitle:"ചോദ്യപാക്കേജ്", pkgText:"ഒരു ചോദ്യപാക്കേജിൽ ഒരു പാഠത്തിന്റെ കാർഡുകളും ചോദ്യങ്ങളും ഉണ്ട് (പുരോഗതി ഇല്ലാതെ). ഇതുവഴി പാഠം മറ്റൊരു ഉപകരണത്തിലേക്ക് മാറ്റാനോ പങ്കിടാനോ കഴിയും. ഇമ്പോർട്ട് ചെയ്യുമ്പോൾ പുതിയ പാഠം ഉണ്ടാകും, അല്ലെങ്കിൽ അതേ പേരുള്ള പാഠത്തിലേക്ക് ചോദ്യങ്ങൾ ചേർക്കും.",
+    exportCur:"ഇപ്പോഴത്തെ പാഠം എക്സ്പോർട്ട് ചെയ്യുക", importPkg:"ചോദ്യപാക്കേജ് ഇമ്പോർട്ട് ചെയ്യുക …", formatSum:"സ്വന്തം പാക്കേജുകൾക്കുള്ള ഫോർമാറ്റ്",
+    backupTitle:"എല്ലാം ബാക്കപ്പ് ചെയ്യുക", backupText:"എല്ലാ പാഠങ്ങളും പുരോഗതിയും ഒരു ഫയലായി. ഇമ്പോർട്ട് ചെയ്താൽ ഈ ബ്രൗസറിലെ എല്ലാം മാറ്റിസ്ഥാപിക്കും.", exportAll:"എല്ലാം എക്സ്പോർട്ട് ചെയ്യുക", importBackup:"ബാക്കപ്പ് ഇമ്പോർട്ട് ചെയ്യുക …",
+    badJson:"ഫയൽ സാധുവായ JSON അല്ല.", notPkg:"ഇതൊരു ചോദ്യപാക്കേജ് അല്ല.", importedName:"ഇമ്പോർട്ട് ചെയ്തത്", importSrc:"ഇമ്പോർട്ട് ", imported:(k,q,n) => "“" + n + "” എന്നതിലേക്ക് " + k + " കാർഡുകൾ, " + q + " ചോദ്യങ്ങൾ ഇമ്പോർട്ട് ചെയ്തു.",
+    notBackup:"ഇത് Stofftrainer ബാക്കപ്പ് അല്ല.", backupOk:"ബാക്കപ്പ് ഇമ്പോർട്ട് ചെയ്തു."
+  }
+};
+const UI_LANGS = [["de","Deutsch"],["en","English"],["ml","മലയാളം"]];
+const ui = () => (T[S.uiLang] ? S.uiLang : "de");
+function t(key, ...args){ let v = T[ui()][key]; if (v === undefined) v = T.en[key]; if (v === undefined) v = T.de[key]; if (v === undefined) return key; return typeof v === "function" ? v(...args) : v; }
+const loc = () => t("loc");
+const langName = v => t("lang_" + (["en","ml"].includes(v) ? v : "de"));
+function applyUi(){ document.documentElement.lang = ui(); document.title = t("appTitle"); $("header h1").textContent = t("appTitle"); $("#stoffsel").setAttribute("aria-label", t("selAria"));
+  $("#upd").innerHTML = esc(t("upd")) + `<button class="btn sm" style="background:var(--card);color:var(--ink)" onclick="location.reload()">${esc(t("reload"))}</button>`; }
+window.setUiLang = v => { S.uiLang = T[v] ? v : "de"; save(); applyUi(); go(view); toast(t("toastUi")); };
+
+/* ---------- Mutmachsprüche (folgen der App-Sprache; ml → en) ---------- */
 const MUT = {
   en: {
     ok: ["Nice one!", "Spot on!", "You've got this.", "Brilliant – keep going!", "Correct. Your brain is on fire today.", "Yes! That's how it's done.", "Well done, that one's locked in.", "Great memory!", "Boom. Next!", "Exactly right."],
@@ -146,9 +371,9 @@ const MUT = {
     sim: pct => pct >= 90 ? "Hervorragend! Das wäre glatt bestanden." : pct >= 75 ? "Gut gemacht – das reicht zum Bestehen. Schwachstellen noch glätten." : pct >= 50 ? "Halbzeit. Fehlerliste üben und nochmal ran." : "Ein erster Lauf ist nur der Startpunkt. Dranbleiben – es wird leichter."
   }
 };
-const mut = kind => { const m = MUT[sprache()] || MUT.en; const l = m[kind]; return l[Math.floor(Math.random()*l.length)]; };
-const mutRound = (ok, n) => (MUT[sprache()] || MUT.en).round(ok, n);
-const mutSim = pct => (MUT[sprache()] || MUT.en).sim(pct);
+const mut = kind => { const m = MUT[ui()] || MUT.en; const l = m[kind]; return l[Math.floor(Math.random()*l.length)]; };
+const mutRound = (ok, n) => (MUT[ui()] || MUT.en).round(ok, n);
+const mutSim = pct => (MUT[ui()] || MUT.en).sim(pct);
 
 /* ---------- SM-2 ---------- */
 function schedule(id, q){
@@ -167,7 +392,7 @@ function preview(id, q){
   const c = L().cards[id] || {ef:2.5, iv:0, reps:0};
   if (q === 0) return "10 min";
   const iv = c.reps === 0 ? (q === 3 ? 3 : 1) : c.reps === 1 ? (q===1?3:q===2?4:6) : Math.round(c.iv*(q===1?1.2:q===2?c.ef:c.ef*1.3));
-  return iv + (iv === 1 ? " Tag" : " Tage");
+  return t("day", iv);
 }
 const dueEnd = () => today() + DAY;
 const dueCards = () => stoff().karten.filter(c => L().cards[c.id] && L().cards[c.id].due < dueEnd());
@@ -181,24 +406,24 @@ function pensum(){
 }
 
 /* ---------- Navigation ---------- */
-const TABS = [["start","Start","⌂"],["stoff","Stoff","＋"],["karten","Karten","▤"],["fragen","Fragen","?"],["pruefung","Prüfung","◷"],["mehr","Mehr","…"]];
+const TABS = [["start","⌂"],["stoff","＋"],["karten","▤"],["fragen","?"],["pruefung","◷"],["mehr","…"]];
 const PARENT = {lernen:"karten", mc:"fragen", sim:"pruefung", simres:"pruefung", stat:"mehr", daten:"mehr", neu:"stoff", editor:"stoff", hilfe:"mehr"};
 let view = "start", timerH = null;
 function go(v, arg){
   view = v;
   if (!stoff() && !["neu","daten","start","hilfe"].includes(v)) view = v = "neu";
-  $("#tabs").innerHTML = TABS.map(([k,l,i]) => `<button class="${(view===k||PARENT[view]===k)?"on":""}" onclick="go('${k}')"><b>${i}</b>${l}</button>`).join("");
+  $("#tabs").innerHTML = TABS.map(([k,i]) => `<button class="${(view===k||PARENT[view]===k)?"on":""}" onclick="go('${k}')"><b>${i}</b>${t("tab_"+k)}</button>`).join("");
   renderSel(); window.scrollTo(0,0); (V[v]||V.start)(arg);
 }
 function renderSel(){
   const ids = Object.keys(S.stoffe);
-  $("#stoffsel").innerHTML = ids.map(id => `<option value="${id}" ${id===S.aktiv?"selected":""}>${esc(S.stoffe[id].name)}</option>`).join("") + `<option value="__neu">+ Neuer Stoff …</option>`;
+  $("#stoffsel").innerHTML = ids.map(id => `<option value="${id}" ${id===S.aktiv?"selected":""}>${esc(S.stoffe[id].name)}</option>`).join("") + `<option value="__neu">${t("newOpt")}</option>`;
   $("#stoffsel").hidden = !ids.length;
 }
 $("#stoffsel").onchange = e => { if (e.target.value === "__neu") go("neu"); else { S.aktiv = e.target.value; save(); go("start"); } };
 const app = h => { $("#app").innerHTML = h; };
 const topts = (sel, list) => { const ts = [...new Set(list.map(x => x.t).filter(Boolean))].sort();
-  return `<option value="">Alle Themen</option>` + ts.map(t => `<option value="${esc(t)}" ${sel===t?"selected":""}>${esc(t)}</option>`).join(""); };
+  return `<option value="">${t("allTopics")}</option>` + ts.map(t => `<option value="${esc(t)}" ${sel===t?"selected":""}>${esc(t)}</option>`).join(""); };
 function themaStat(t){
   const s = stoff(), l = L(), cs = s.karten.filter(c => c.t === t), qs = s.mc.filter(q => q.t === t);
   const sicher = cs.filter(c => l.cards[c.id] && l.cards[c.id].iv >= 7).length;
@@ -208,13 +433,13 @@ function themaStat(t){
 
 /* ---------- Ansichten ---------- */
 const V = {};
-V.neu = () => app(`<h2>${Object.keys(S.stoffe).length ? "Neuer Stoff" : "Willkommen"}</h2>
-  <div class="card prose"><p style="margin-top:0">Ein Stoff ist ein Thema, das du lernen willst: Fahrradprüfung, Erste Hilfe, Biologie 7, Führerschein-Theorie. Du lädst Unterlagen hoch (PDF, Fotos, Screenshots oder Text), die App liest sie aus, erzeugt Lernkarten und Fragen und fragt dich ab. Alles passiert auf diesem Gerät, ohne Internet.</p>
-  <label for="nn" class="small muted">Name des Stoffs</label><input type="text" id="nn" placeholder="z. B. Fahrradprüfung 4. Klasse" maxlength="60">
-  <div class="row" style="margin-top:10px"><label for="nsp" class="small muted">Sprache des Stoffs</label><select id="nsp"><option value="de">Deutsch</option><option value="en">Englisch</option><option value="ml">Malayalam</option></select></div>
-  <p class="small muted">Die Sprache steuert Texterkennung und Fragenerzeugung. Die Bedienung bleibt deutsch.</p>
-  <div class="row" style="margin-top:12px"><button class="btn p" onclick="neuStoff()">Anlegen</button>${Object.keys(S.stoffe).length?`<button class="btn" onclick="go('start')">Abbrechen</button>`:""}</div></div>
-  <div class="card small muted"><b>Fertige Fragen vorhanden?</b> Unter Mehr → Daten lässt sich ein Fragenpaket (JSON) importieren.</div>`);
+V.neu = () => app(`<h2>${Object.keys(S.stoffe).length ? t("newStoff") : t("welcome")}</h2>
+  <div class="card prose"><p style="margin-top:0">${t("neuIntro")}</p>
+  <label for="nn" class="small muted">${t("neuName")}</label><input type="text" id="nn" placeholder="${esc(t("neuPh"))}" maxlength="60">
+  <div class="row" style="margin-top:10px"><label for="nsp" class="small muted">${t("neuLang")}</label><select id="nsp">${["de","en","ml"].map(v => `<option value="${v}" ${ui()===v?"selected":""}>${langName(v)}</option>`).join("")}</select></div>
+  <p class="small muted">${t("neuHint")}</p>
+  <div class="row" style="margin-top:12px"><button class="btn p" onclick="neuStoff()">${t("create")}</button>${Object.keys(S.stoffe).length?`<button class="btn" onclick="go('start')">${t("cancel")}</button>`:""}</div></div>
+  <div class="card small muted">${t("neuPkg")}</div>`);
 window.neuStoff = () => { const n = $("#nn").value.trim(); if (!n){ $("#nn").focus(); return; }
   const id = uid(); S.stoffe[id] = {id, name:n, sprache: $("#nsp").value, erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; S.aktiv = id; save(); go("stoff"); };
 const sprache = () => (stoff() && stoff().sprache) || "de";
@@ -223,21 +448,21 @@ V.start = () => {
   const s = stoff(); if (!s) return V.neu();
   const l = L(), p = pensum(), fl = Object.keys(l.fehler).length, offen = s.mc.filter(q => !q.r || !q.r.length).length;
   const themen = [...new Set(s.karten.map(c=>c.t).concat(s.mc.map(q=>q.t)).filter(Boolean))];
-  const rows = themen.map(t => { const st = themaStat(t); const pr = (st.cs ? st.sicher/st.cs : 0)*.5 + (st.n ? Math.min(1, st.ok/Math.max(1,st.qs)) : 0)*.5;
-    return `<tr><td>${esc(t)}<div class="small muted">${st.sicher}/${st.cs} Karten sicher · ${st.n?Math.round(100*st.ok/st.n)+" % richtig":"noch keine Fragen"}</div></td><td style="width:30%"><div class="bar"><span style="width:${Math.round(pr*100)}%"></span></div></td></tr>`; }).join("");
+  const rows = themen.map(th => { const st = themaStat(th); const pr = (st.cs ? st.sicher/st.cs : 0)*.5 + (st.n ? Math.min(1, st.ok/Math.max(1,st.qs)) : 0)*.5;
+    return `<tr><td>${esc(th)}<div class="small muted">${t("kSicher",st.sicher,st.cs)} · ${st.n?t("pctRight",Math.round(100*st.ok/st.n)):t("noQYet")}</div></td><td style="width:30%"><div class="bar"><span style="width:${Math.round(pr*100)}%"></span></div></td></tr>`; }).join("");
   const last = l.sims[l.sims.length-1];
-  if (!s.karten.length && !s.mc.length) return app(`<h2>${esc(s.name)}</h2><div class="card prose"><p style="margin-top:0">Noch keine Fragen. Lade unter <b>Stoff</b> Unterlagen hoch und lass Fragen erzeugen.</p><button class="btn p" onclick="go('stoff')">Stoff hochladen</button></div>`);
-  app(`<h2>${esc(s.name)} · heute</h2>
-  ${offen ? `<div class="note">${offen} Frage${offen===1?"":"n"} ohne markierte richtige Antwort. <a href="#" onclick="go('editor',{todo:true});return false">Im Editor festlegen</a>, dann werden sie abgefragt.</div>` : ""}
-  <div class="kpi"><div><span class="muted small">Fällige Wiederholungen</span><b>${p.due}</b></div><div><span class="muted small">Neue Karten heute</span><b>${p.neu}</b></div>
-  <div><span class="muted small">Fehlerliste</span><b>${fl}</b></div><div><span class="muted small">Prüfung</span><b>${p.tage == null ? "–" : p.tage > 0 ? p.tage + " Tage" : "vorbei"}</b></div></div>
-  <div class="card" style="margin-top:14px"><div class="row"><button class="btn p" onclick="go('lernen',{})" ${p.due+p.neu?"":"disabled"}>Karten lernen (${p.due + p.neu})</button>
-  <button class="btn" onclick="startMC({n:10})" ${mcFertig().length?"":"disabled"}>10 Fragen</button><button class="btn" onclick="startMC({fehler:true})" ${fl?"":"disabled"}>Fehlerliste üben</button></div>
-  <p class="small muted" style="margin-bottom:0">${s.karten.length} Karten, ${s.mc.length} Fragen aus ${s.quellen.length} Quelle${s.quellen.length===1?"":"n"}.${p.tage > 0 ? " Neue Karten werden so verteilt, dass die letzten Tage vor der Prüfung der Wiederholung dienen." : ""}</p></div>
-  <div class="card"><div class="row"><label for="pd">Prüfungsdatum</label><input type="date" id="pd" value="${l.pruefung}" onchange="L().pruefung=this.value;save();go('start')">
-  <label for="np" class="small muted">Neue Karten/Tag</label><select id="np" onchange="L().neuProTag=+this.value;save();go('start')">${[5,10,15,20,30].map(n=>`<option ${l.neuProTag==n?"selected":""}>${n}</option>`).join("")}</select></div>
-  ${last ? `<p class="small muted" style="margin-bottom:0">Letzte Prüfungssimulation: ${new Date(last.t).toLocaleDateString("de-DE")} – ${last.pct} %</p>` : ""}</div>
-  ${rows ? `<h2>Fortschritt je Thema</h2><div class="card tw"><table>${rows}</table></div>` : ""}`);
+  if (!s.karten.length && !s.mc.length) return app(`<h2>${esc(s.name)}</h2><div class="card prose"><p style="margin-top:0">${t("emptyStart")}</p><button class="btn p" onclick="go('stoff')">${t("uploadStoff")}</button></div>`);
+  app(`<h2>${esc(s.name)} · ${t("today")}</h2>
+  ${offen ? `<div class="note">${t("noteOpen",offen)}<a href="#" onclick="go('editor',{todo:true});return false">${t("noteLink")}</a>${t("noteSuffix")}</div>` : ""}
+  <div class="kpi"><div><span class="muted small">${t("kpiDue")}</span><b>${p.due}</b></div><div><span class="muted small">${t("kpiNew")}</span><b>${p.neu}</b></div>
+  <div><span class="muted small">${t("kpiErr")}</span><b>${fl}</b></div><div><span class="muted small">${t("kpiExam")}</span><b>${p.tage == null ? "–" : p.tage > 0 ? t("days",p.tage) : t("over")}</b></div></div>
+  <div class="card" style="margin-top:14px"><div class="row"><button class="btn p" onclick="go('lernen',{})" ${p.due+p.neu?"":"disabled"}>${t("learnBtn",p.due + p.neu)}</button>
+  <button class="btn" onclick="startMC({n:10})" ${mcFertig().length?"":"disabled"}>${t("q10")}</button><button class="btn" onclick="startMC({fehler:true})" ${fl?"":"disabled"}>${t("practiceErr")}</button></div>
+  <p class="small muted" style="margin-bottom:0">${t("summary",s.karten.length,s.mc.length,s.quellen.length)}${p.tage > 0 ? t("spreadHint") : ""}</p></div>
+  <div class="card"><div class="row"><label for="pd">${t("examDate")}</label><input type="date" id="pd" value="${l.pruefung}" onchange="L().pruefung=this.value;save();go('start')">
+  <label for="np" class="small muted">${t("newPerDay")}</label><select id="np" onchange="L().neuProTag=+this.value;save();go('start')">${[5,10,15,20,30].map(n=>`<option ${l.neuProTag==n?"selected":""}>${n}</option>`).join("")}</select></div>
+  ${last ? `<p class="small muted" style="margin-bottom:0">${t("lastSim")}${new Date(last.t).toLocaleDateString(loc())} – ${last.pct} %</p>` : ""}</div>
+  ${rows ? `<h2>${t("progress")}</h2><div class="card tw"><table>${rows}</table></div>` : ""}`);
 };
 
 /* ---------- Stoff: Quellen, OCR, Erzeugen ---------- */
@@ -245,56 +470,56 @@ let pend = [];   // vorbereitete Quellen: {name, text, hinweis}
 let busy = false;
 V.stoff = () => {
   const s = stoff();
-  app(`<h2>${esc(s.name)} · Stoff</h2>
-  <div class="card"><h3 style="margin-top:0">Unterlagen hinzufügen</h3>
-  <div class="drop" id="drop">Dateien hierher ziehen<br><span class="small">PDF, Foto oder Screenshot (JPG, PNG, WebP). Fotos werden per Texterkennung gelesen.</span>
-  <div class="row" style="justify-content:center;margin-top:10px"><label class="btn" for="fin">Dateien wählen …</label><input type="file" id="fin" hidden multiple accept="application/pdf,.pdf,image/*" onchange="addFiles(this.files)">
-  <label class="btn" for="fcam">Foto aufnehmen</label><input type="file" id="fcam" hidden accept="image/*" capture="environment" onchange="addFiles(this.files)"></div>
+  app(`<h2>${esc(s.name)} · ${t("stoffSuffix")}</h2>
+  <div class="card"><h3 style="margin-top:0">${t("addDocs")}</h3>
+  <div class="drop" id="drop">${t("dropHere")}<br><span class="small">${t("dropSub")}</span>
+  <div class="row" style="justify-content:center;margin-top:10px"><label class="btn" for="fin">${t("chooseFiles")}</label><input type="file" id="fin" hidden multiple accept="application/pdf,.pdf,image/*" onchange="addFiles(this.files)">
+  <label class="btn" for="fcam">${t("takePhoto")}</label><input type="file" id="fcam" hidden accept="image/*" capture="environment" onchange="addFiles(this.files)"></div>
   <div class="status small muted" id="ost" style="margin-top:8px"></div></div>
-  <h3>Oder Text einfügen</h3><textarea id="ptxt" placeholder="Text aus einem Buch, einer Webseite oder deinen Notizen …"></textarea>
-  <div class="row" style="margin-top:8px"><input type="text" id="ptn" placeholder="Bezeichnung (optional)" style="flex:1;min-width:160px"><button class="btn" onclick="addText()">Text übernehmen</button></div></div>
-  <div class="card" id="pendbox" ${pend.length?"":"hidden"}><h3 style="margin-top:0">Bereit zum Erzeugen</h3><div id="pendlist"></div>
-  <div class="row" style="margin-top:12px"><label class="small muted" for="gk">Karten je Quelle (max.)</label><select id="gk">${[10,20,30,50,100].map(n=>`<option ${n===30?"selected":""}>${n}</option>`).join("")}</select>
-  <label class="small muted" for="gq">MC-Fragen je Quelle (max.)</label><select id="gq">${[10,20,30,50,100].map(n=>`<option ${n===30?"selected":""}>${n}</option>`).join("")}</select></div>
-  <div class="row" style="margin-top:10px"><button class="btn p" onclick="erzeugen()">Fragen erzeugen</button><span class="status small muted" id="gst"></span></div>
-  <p class="small muted" style="margin-bottom:0">Erkannte Prüfungsfragen aus dem Text werden immer übernommen; die Zahlen begrenzen nur die zusätzlich erzeugten Lückentext-, Zahlen- und Definitionsfragen. Danach im Editor durchsehen.</p></div>
-  <div class="card"><h3 style="margin-top:0">Quellen in diesem Stoff</h3>${s.quellen.length ? s.quellen.map(q => `<div class="src"><span>${esc(q.name)} <span class="tag">${Math.round((q.zeichen||0)/1000)} k Zeichen</span> <span class="small muted">${s.karten.filter(c=>c.src===q.id).length} Karten · ${s.mc.filter(m=>m.src===q.id).length} Fragen</span></span><span style="white-space:nowrap"><button class="btn sm" onclick="go('editor',{src:'${q.id}'})">Editor</button> <button class="btn sm" onclick="delQuelle('${q.id}')">Entfernen</button></span></div>`).join("") : '<p class="muted">Noch keine.</p>'}
-  ${s.karten.length || s.mc.length ? `<div class="row" style="margin-top:10px"><button class="btn" onclick="go('editor',{})">Alle Fragen im Editor</button><button class="btn" onclick="neueFrage()">Frage von Hand anlegen</button></div>` : ""}</div>
-  <div class="card"><h3 style="margin-top:0">Stoff verwalten</h3><div class="row" style="margin-bottom:10px"><label for="ssp" class="small muted">Sprache</label><select id="ssp" onchange="stoff().sprache=this.value;save();toast('Sprache: '+({en:'Englisch',ml:'Malayalam'}[this.value]||'Deutsch'))"><option value="de" ${sprache()==="de"?"selected":""}>Deutsch</option><option value="en" ${sprache()==="en"?"selected":""}>Englisch</option><option value="ml" ${sprache()==="ml"?"selected":""}>Malayalam</option></select></div><div class="row"><button class="btn" onclick="umbenennen()">Umbenennen</button><button class="btn" onclick="exportStoff()">Als Fragenpaket exportieren</button><button class="btn danger" onclick="askDel()">Stoff löschen</button></div><div id="delc"></div></div>`);
+  <h3>${t("orPaste")}</h3><textarea id="ptxt" placeholder="${esc(t("pastePh"))}"></textarea>
+  <div class="row" style="margin-top:8px"><input type="text" id="ptn" placeholder="${esc(t("labelPh"))}" style="flex:1;min-width:160px"><button class="btn" onclick="addText()">${t("takeText")}</button></div></div>
+  <div class="card" id="pendbox" ${pend.length?"":"hidden"}><h3 style="margin-top:0">${t("readyGen")}</h3><div id="pendlist"></div>
+  <div class="row" style="margin-top:12px"><label class="small muted" for="gk">${t("cardsPerSrc")}</label><select id="gk">${[10,20,30,50,100].map(n=>`<option ${n===30?"selected":""}>${n}</option>`).join("")}</select>
+  <label class="small muted" for="gq">${t("mcPerSrc")}</label><select id="gq">${[10,20,30,50,100].map(n=>`<option ${n===30?"selected":""}>${n}</option>`).join("")}</select></div>
+  <div class="row" style="margin-top:10px"><button class="btn p" onclick="erzeugen()">${t("generate")}</button><span class="status small muted" id="gst"></span></div>
+  <p class="small muted" style="margin-bottom:0">${t("genHint")}</p></div>
+  <div class="card"><h3 style="margin-top:0">${t("srcTitle")}</h3>${s.quellen.length ? s.quellen.map(q => `<div class="src"><span>${esc(q.name)} <span class="tag">${t("chars",Math.round((q.zeichen||0)/1000))}</span> <span class="small muted">${t("srcCounts",s.karten.filter(c=>c.src===q.id).length,s.mc.filter(m=>m.src===q.id).length)}</span></span><span style="white-space:nowrap"><button class="btn sm" onclick="go('editor',{src:'${q.id}'})">${t("editor")}</button> <button class="btn sm" onclick="delQuelle('${q.id}')">${t("remove")}</button></span></div>`).join("") : `<p class="muted">${t("noneYet")}</p>`}
+  ${s.karten.length || s.mc.length ? `<div class="row" style="margin-top:10px"><button class="btn" onclick="go('editor',{})">${t("allInEditor")}</button><button class="btn" onclick="neueFrage()">${t("manualQ")}</button></div>` : ""}</div>
+  <div class="card"><h3 style="margin-top:0">${t("manage")}</h3><div class="row" style="margin-bottom:10px"><label for="ssp" class="small muted">${t("lang")}</label><select id="ssp" onchange="stoff().sprache=this.value;save();toast(t('toastLang',langName(this.value)))">${["de","en","ml"].map(v => `<option value="${v}" ${sprache()===v?"selected":""}>${langName(v)}</option>`).join("")}</select></div><div class="row"><button class="btn" onclick="umbenennen()">${t("rename")}</button><button class="btn" onclick="exportStoff()">${t("exportPkg")}</button><button class="btn danger" onclick="askDel()">${t("delStoff")}</button></div><div id="delc"></div></div>`);
   renderPend();
   const d = $("#drop");
   d.ondragover = e => { e.preventDefault(); d.classList.add("over"); }; d.ondragleave = () => d.classList.remove("over");
   d.ondrop = e => { e.preventDefault(); d.classList.remove("over"); addFiles(e.dataTransfer.files); };
 };
 function renderPend(){ const b = $("#pendbox"); if (!b) return; b.hidden = !pend.length;
-  $("#pendlist").innerHTML = pend.map((p,i) => `<div class="src"><span>${esc(p.name)} <span class="tag">${Math.round(p.text.length/1000)} k Zeichen</span>${p.hinweis?` <span class="small muted">${esc(p.hinweis)}</span>`:""} <button class="btn sm" onclick="zeigText(${i})">Text ansehen</button></span><button class="btn sm" onclick="pend.splice(${i},1);renderPend()">✕</button></div>`).join(""); }
-window.zeigText = i => { const p = pend[i]; app(`<button class="btn sm" onclick="go('stoff')">← Zurück</button><h2>${esc(p.name)}</h2><div class="card"><p class="small muted">Erkannter Text. Du kannst ihn hier korrigieren, bevor Fragen erzeugt werden.</p><textarea id="tx" style="min-height:50vh">${esc(p.text)}</textarea><div class="row" style="margin-top:10px"><button class="btn p" onclick="pend[${i}].text=$('#tx').value;go('stoff')">Übernehmen</button></div></div>`); };
-window.addText = () => { const t = $("#ptxt").value.trim(); if (t.length < 40){ toast("Bitte etwas mehr Text (mindestens 40 Zeichen)."); return; }
-  pend.push({name: $("#ptn").value.trim() || "Text vom " + new Date().toLocaleDateString("de-DE"), text:t}); $("#ptxt").value = ""; $("#ptn").value = ""; renderPend(); };
+  $("#pendlist").innerHTML = pend.map((p,i) => `<div class="src"><span>${esc(p.name)} <span class="tag">${t("chars",Math.round(p.text.length/1000))}</span>${p.hinweis?` <span class="small muted">${esc(p.hinweis)}</span>`:""} <button class="btn sm" onclick="zeigText(${i})">${t("showText")}</button></span><button class="btn sm" onclick="pend.splice(${i},1);renderPend()">✕</button></div>`).join(""); }
+window.zeigText = i => { const p = pend[i]; app(`<button class="btn sm" onclick="go('stoff')">${t("back")}</button><h2>${esc(p.name)}</h2><div class="card"><p class="small muted">${t("ocrEditHint")}</p><textarea id="tx" style="min-height:50vh">${esc(p.text)}</textarea><div class="row" style="margin-top:10px"><button class="btn p" onclick="pend[${i}].text=$('#tx').value;go('stoff')">${t("apply")}</button></div></div>`); };
+window.addText = () => { const tx = $("#ptxt").value.trim(); if (tx.length < 40){ toast(t("moreText")); return; }
+  pend.push({name: $("#ptn").value.trim() || t("textFrom", new Date().toLocaleDateString(loc())), text:tx}); $("#ptxt").value = ""; $("#ptn").value = ""; renderPend(); };
 const st = m => { const e = $("#ost"); if (e) e.textContent = m; };
 window.addFiles = async files => {
-  if (busy) { toast("Bitte warten, eine Datei wird noch gelesen."); return; }
+  if (busy) { toast(t("waitFile")); return; }
   busy = true; const imgs = [];
   try {
     for (const f of Array.from(files || [])){
       try {
         if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) await addPdf(f);
         else if (/^image\//.test(f.type)) imgs.push(f);
-        else toast("Nicht unterstützt: " + f.name);
-      } catch(e){ console.error(e); toast("Konnte " + f.name + " nicht lesen: " + (e.message || e)); }
+        else toast(t("unsupported", f.name));
+      } catch(e){ console.error(e); toast(t("cantRead", f.name, e.message || e)); }
     }
     if (imgs.length){
       let text = "";
-      for (let i = 0; i < imgs.length; i++){ st(`Texterkennung Bild ${i+1}/${imgs.length} …`); const t = await ocr(imgs[i], p => st(`Texterkennung Bild ${i+1}/${imgs.length} … ${Math.round(p*100)} %`)); if (t.trim()) text += (text ? "\n\n" : "") + t.trim(); }
-      if (text.replace(/\s/g,"").length < 40) toast("Auf den Bildern wurde kaum Text erkannt.");
-      else pend.push({name: imgs.length === 1 ? imgs[0].name : imgs.length + " Bilder (" + imgs[0].name + " …)", text, hinweis: "aus Texterkennung – bitte prüfen"});
+      for (let i = 0; i < imgs.length; i++){ st(t("ocrImg", i+1, imgs.length)); const tx = await ocr(imgs[i], p => st(t("ocrImgP", i+1, imgs.length, Math.round(p*100)))); if (tx.trim()) text += (text ? "\n\n" : "") + tx.trim(); }
+      if (text.replace(/\s/g,"").length < 40) toast(t("littleText"));
+      else pend.push({name: imgs.length === 1 ? imgs[0].name : t("nImages", imgs.length, imgs[0].name), text, hinweis: t("fromOcr")});
     }
   } finally { busy = false; st(""); renderPend(); const fi = $("#fin"); if (fi) fi.value = ""; const fc = $("#fcam"); if (fc) fc.value = ""; }
 };
 async function addPdf(f){
-  if (!window.pdfjsLib) throw new Error("PDF-Bibliothek fehlt");
+  if (!window.pdfjsLib) throw new Error(t("noPdfLib"));
   pdfjsLib.GlobalWorkerOptions.workerSrc = "pdf.worker.min.js";
-  st("Lese " + f.name + " …");
+  st(t("reading", f.name));
   const pdf = await pdfjsLib.getDocument({data: await f.arrayBuffer()}).promise;
   let text = "", ohne = [];
   for (let i = 1; i <= pdf.numPages; i++){
@@ -303,7 +528,7 @@ async function addPdf(f){
     for (const it of tc.items){ if (!("str" in it)) continue; const y = it.transform ? Math.round(it.transform[5]) : null; if (lastY !== null && Math.abs(y - lastY) > 2 && !pt.endsWith("\n")) pt += "\n"; pt += it.str + (it.hasEOL ? "\n" : " "); lastY = y; }
     pt = pt.replace(/[ \t]+\n/g, "\n").replace(/ {2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
     if (pt.replace(/\s/g, "").length < 80) ohne.push(i); else text += `\n\n[Seite ${i}]\n` + pt;
-    st(`Lese ${f.name} … Seite ${i}/${pdf.numPages}`);
+    st(t("readingPage", f.name, i, pdf.numPages));
   }
   // Seiten ohne Textebene (Scan, Screenshot-PDF) per Texterkennung
   let ocrText = "";
@@ -311,19 +536,19 @@ async function addPdf(f){
     const i = ohne[k], page = await pdf.getPage(i), vp = page.getViewport({scale: 2});
     const cv = document.createElement("canvas"); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
     await page.render({canvasContext: cv.getContext("2d"), viewport: vp}).promise;
-    const t = await ocr(cv, p => st(`Texterkennung ${f.name} Seite ${i} (${k+1}/${Math.min(ohne.length,60)}) … ${Math.round(p*100)} %`));
-    if (t.replace(/\s/g,"").length > 40) ocrText += `\n\n[Seite ${i}]\n` + t.trim();
+    const tx = await ocr(cv, p => st(t("ocrPage", f.name, i, k+1, Math.min(ohne.length,60), Math.round(p*100))));
+    if (tx.replace(/\s/g,"").length > 40) ocrText += `\n\n[Seite ${i}]\n` + tx.trim();
   }
   const all = (text + ocrText).trim();
-  if (all.length < 40) throw new Error("kein Text gefunden");
-  pend.push({name: f.name, text: all, hinweis: ohne.length ? ohne.length + " Seite(n) per Texterkennung" + (ohne.length > 60 ? " (nur die ersten 60)" : "") : ""});
+  if (all.length < 40) throw new Error(t("noText"));
+  pend.push({name: f.name, text: all, hinweis: ohne.length ? t("pagesOcr", ohne.length, ohne.length > 60) : ""});
 }
 let ocrWorker = null, ocrLang = "";
 async function ocr(img, onP){
-  if (!window.Tesseract) throw new Error("Texterkennung nicht verfügbar");
+  if (!window.Tesseract) throw new Error(t("noOcr"));
   const lang = ({en:"eng", ml:"mal+eng"})[sprache()] || "deu";
   if (ocrWorker && ocrLang !== lang){ try { await ocrWorker.terminate(); } catch(e){} ocrWorker = null; }
-  if (!ocrWorker){ st("Texterkennung wird vorbereitet (einmalig je Sprache) …"); ocrLang = lang;
+  if (!ocrWorker){ st(t("ocrPrep")); ocrLang = lang;
     ocrWorker = await Tesseract.createWorker(lang, 1, {workerPath: "worker.min.js", corePath: ".", langPath: ".", gzip: true,
       logger: m => { if (m.status === "recognizing text" && onP) onP(m.progress || 0); }}); }
   const r = await ocrWorker.recognize(img);
@@ -340,18 +565,18 @@ window.erzeugen = () => {
     hin.push(...res.hinweise);
   }
   pend = []; save();
-  toast(`${addK} Karten und ${addQ} Fragen hinzugefügt.${offen ? " " + offen + " Fragen brauchen noch die richtige Antwort." : ""}`);
+  toast(t("added", addK, addQ, offen));
   go("editor", {todo: offen > 0, hinweise: hin});
 };
 window.delQuelle = id => { const s = stoff(); s.quellen = s.quellen.filter(q => q.id !== id); s.karten = s.karten.filter(c => c.src !== id); s.mc = s.mc.filter(q => q.src !== id); save(); V.stoff(); };
-window.umbenennen = () => { const s = stoff(); app(`<h2>Umbenennen</h2><div class="card"><input type="text" id="rn" value="${esc(s.name)}" maxlength="60"><div class="row" style="margin-top:12px"><button class="btn p" onclick="stoff().name=$('#rn').value.trim()||stoff().name;save();go('stoff')">Speichern</button><button class="btn" onclick="go('stoff')">Abbrechen</button></div></div>`); };
-window.askDel = () => { $("#delc").innerHTML = `<div class="confirm">Stoff „${esc(stoff().name)}“ mit allen Fragen und dem Lernstand löschen? Das lässt sich nicht rückgängig machen.<div class="row" style="margin-top:8px"><button class="btn danger" onclick="delStoff()">Ja, löschen</button><button class="btn sm" onclick="$('#delc').innerHTML=''">Abbrechen</button></div></div>`; };
+window.umbenennen = () => { const s = stoff(); app(`<h2>${t("rename")}</h2><div class="card"><input type="text" id="rn" value="${esc(s.name)}" maxlength="60"><div class="row" style="margin-top:12px"><button class="btn p" onclick="stoff().name=$('#rn').value.trim()||stoff().name;save();go('stoff')">${t("save")}</button><button class="btn" onclick="go('stoff')">${t("cancel")}</button></div></div>`); };
+window.askDel = () => { $("#delc").innerHTML = `<div class="confirm">${esc(t("confirmDel", stoff().name))}<div class="row" style="margin-top:8px"><button class="btn danger" onclick="delStoff()">${t("yesDel")}</button><button class="btn sm" onclick="$('#delc').innerHTML=''">${t("cancel")}</button></div></div>`; };
 window.delStoff = () => { delete S.stoffe[S.aktiv]; S.aktiv = Object.keys(S.stoffe)[0] || ""; save(); go("start"); };
-window.neueFrage = () => { const s = stoff(); let src = s.quellen.find(q => q.manuell); if (!src){ src = {id: uid(), name: "Von Hand angelegt", manuell: true, zeichen: 0}; s.quellen.push(src); }
+window.neueFrage = () => { const s = stoff(); let src = s.quellen.find(q => q.manuell); if (!src){ src = {id: uid(), name: t("manualSrc"), manuell: true, zeichen: 0}; s.quellen.push(src); }
   const id = "q" + uid(); s.mc.push({id, f: "", o: ["", "", "", ""], r: [], e: "", t: "", art: "manuell", src: src.id}); save(); go("editor", {src: src.id}); };
 
 /* ---------- Editor ---------- */
-const ART = {vorhanden:"aus dem Text", definition:"Definition", aufzaehlung:"Aufzählung", luecke:"Lückentext", zahl:"Zahlenfrage", manuell:"von Hand", import:"Import"};
+const artName = k => ["vorhanden","definition","aufzaehlung","luecke","zahl","manuell","import"].includes(k) ? t("art_" + k) : "";
 V.editor = o => {
   o = o || {}; const s = stoff(), m = byId();
   let items = s.mc.map(q => ({q, typ:"mc"})).concat(s.karten.map(k => ({q:k, typ:"k"})));
@@ -359,25 +584,25 @@ V.editor = o => {
   if (o.todo) items = items.filter(x => x.typ === "mc" && !x.q.r.length);
   items.sort((a,b) => (a.typ === "mc" && !a.q.r.length ? 0 : 1) - (b.typ === "mc" && !b.q.r.length ? 0 : 1));
   const qn = o.src ? (s.quellen.find(q => q.id === o.src) || {}).name : "";
-  app(`<button class="btn sm" onclick="go('stoff')">← Stoff</button><h2>Fragen-Editor${qn ? " · " + esc(qn) : ""}</h2>
+  app(`<button class="btn sm" onclick="go('stoff')">← ${t("tab_stoff")}</button><h2>${t("edTitle")}${qn ? " · " + esc(qn) : ""}</h2>
   ${(o.hinweise||[]).map(h => `<div class="note">${esc(h)}</div>`).join("")}
-  <div class="card"><p class="small muted" style="margin-top:0">${items.length} Einträge. Änderungen werden beim Verlassen eines Feldes gespeichert. Bei MC-Fragen die richtige(n) Antwort(en) ankreuzen; Fragen ohne Kreuz werden nicht abgefragt. Gelb markierte brauchen noch eine Lösung.</p>
-  <div class="row"><select id="ef" onchange="go('editor',{src:this.value||undefined})"><option value="">Alle Quellen</option>${s.quellen.map(q => `<option value="${q.id}" ${o.src===q.id?"selected":""}>${esc(q.name)}</option>`).join("")}</select>
-  <button class="btn sm ${o.todo?"p":""}" onclick="go('editor',{src:'${o.src||""}'||undefined,todo:${!o.todo}})">Nur ohne Lösung</button><button class="btn sm" onclick="neueFrage()">+ Neue MC-Frage</button><button class="btn sm" onclick="neueKarte()">+ Neue Karte</button></div></div>
-  <div class="card" id="edlist">${items.map(x => x.typ === "mc" ? edMC(x.q) : edK(x.q)).join("") || '<p class="muted">Nichts zu zeigen.</p>'}</div>`);
+  <div class="card"><p class="small muted" style="margin-top:0">${t("edHint", items.length)}</p>
+  <div class="row"><select id="ef" onchange="go('editor',{src:this.value||undefined})"><option value="">${t("allSources")}</option>${s.quellen.map(q => `<option value="${q.id}" ${o.src===q.id?"selected":""}>${esc(q.name)}</option>`).join("")}</select>
+  <button class="btn sm ${o.todo?"p":""}" onclick="go('editor',{src:'${o.src||""}'||undefined,todo:${!o.todo}})">${t("onlyTodo")}</button><button class="btn sm" onclick="neueFrage()">${t("newMC")}</button><button class="btn sm" onclick="neueKarte()">${t("newCard")}</button></div></div>
+  <div class="card" id="edlist">${items.map(x => x.typ === "mc" ? edMC(x.q) : edK(x.q)).join("") || `<p class="muted">${t("nothing")}</p>`}</div>`);
 };
-function edMC(q){ return `<div class="ed-item ${q.r.length?"":"todo"}" id="ed-${q.id}"><div class="row small muted" style="justify-content:space-between"><span><span class="tag">${esc(q.t||"ohne Thema")}</span> <span class="tag">${ART[q.art]||"MC"}</span></span><button class="btn sm danger" onclick="delItem('${q.id}')">Löschen</button></div>
-  <textarea class="ed" onchange="edSet('${q.id}','f',this.value)" placeholder="Frage">${esc(q.f)}</textarea>
-  ${q.o.map((op,i) => `<div class="ed-opt"><input type="checkbox" ${q.r.includes(i)?"checked":""} onchange="edCorrect('${q.id}',${i},this.checked)" aria-label="richtig"><textarea class="ed" rows="1" onchange="edOpt('${q.id}',${i},this.value)">${esc(op)}</textarea></div>`).join("")}
-  <div class="row"><input type="text" class="ed" style="flex:1" placeholder="Erklärung (optional)" value="${esc(q.e)}" onchange="edSet('${q.id}','e',this.value)"><input type="text" style="width:160px" placeholder="Thema" value="${esc(q.t)}" onchange="edSet('${q.id}','t',this.value)"></div></div>`; }
-function edK(k){ return `<div class="ed-item" id="ed-${k.id}"><div class="row small muted" style="justify-content:space-between"><span><span class="tag">${esc(k.t||"ohne Thema")}</span> <span class="tag">Karte · ${ART[k.art]||""}</span></span><button class="btn sm danger" onclick="delItem('${k.id}')">Löschen</button></div>
-  <textarea class="ed" onchange="edSet('${k.id}','f',this.value)" placeholder="Frage">${esc(k.f)}</textarea><textarea class="ed" onchange="edSet('${k.id}','a',this.value)" placeholder="Antwort">${esc(k.a)}</textarea>
-  <input type="text" style="width:160px" placeholder="Thema" value="${esc(k.t)}" onchange="edSet('${k.id}','t',this.value)"></div>`; }
+function edMC(q){ return `<div class="ed-item ${q.r.length?"":"todo"}" id="ed-${q.id}"><div class="row small muted" style="justify-content:space-between"><span><span class="tag">${esc(q.t||t("noTopic"))}</span> <span class="tag">${artName(q.art)||"MC"}</span></span><button class="btn sm danger" onclick="delItem('${q.id}')">${t("del")}</button></div>
+  <textarea class="ed" onchange="edSet('${q.id}','f',this.value)" placeholder="${t("phQ")}">${esc(q.f)}</textarea>
+  ${q.o.map((op,i) => `<div class="ed-opt"><input type="checkbox" ${q.r.includes(i)?"checked":""} onchange="edCorrect('${q.id}',${i},this.checked)" aria-label="${t("ariaRight")}"><textarea class="ed" rows="1" onchange="edOpt('${q.id}',${i},this.value)">${esc(op)}</textarea></div>`).join("")}
+  <div class="row"><input type="text" class="ed" style="flex:1" placeholder="${esc(t("phExpl"))}" value="${esc(q.e)}" onchange="edSet('${q.id}','e',this.value)"><input type="text" style="width:160px" placeholder="${t("phTopic")}" value="${esc(q.t)}" onchange="edSet('${q.id}','t',this.value)"></div></div>`; }
+function edK(k){ return `<div class="ed-item" id="ed-${k.id}"><div class="row small muted" style="justify-content:space-between"><span><span class="tag">${esc(k.t||t("noTopic"))}</span> <span class="tag">${t("cardTag")} · ${artName(k.art)}</span></span><button class="btn sm danger" onclick="delItem('${k.id}')">${t("del")}</button></div>
+  <textarea class="ed" onchange="edSet('${k.id}','f',this.value)" placeholder="${t("phQ")}">${esc(k.f)}</textarea><textarea class="ed" onchange="edSet('${k.id}','a',this.value)" placeholder="${t("phA")}">${esc(k.a)}</textarea>
+  <input type="text" style="width:160px" placeholder="${t("phTopic")}" value="${esc(k.t)}" onchange="edSet('${k.id}','t',this.value)"></div>`; }
 window.edSet = (id, k, v) => { const x = byId()[id]; if (x){ x[k] = v.trim(); save(); } };
 window.edOpt = (id, i, v) => { const x = byId()[id]; if (x){ x.o[i] = v.trim(); save(); } };
 window.edCorrect = (id, i, on) => { const x = byId()[id]; if (!x) return; x.r = on ? [...new Set(x.r.concat(i))].sort() : x.r.filter(j => j !== i); save(); const e = $("#ed-" + id); if (e) e.classList.toggle("todo", !x.r.length); };
 window.delItem = id => { const s = stoff(); s.mc = s.mc.filter(q => q.id !== id); s.karten = s.karten.filter(k => k.id !== id); delete L().fehler[id]; save(); const e = $("#ed-" + id); if (e) e.remove(); };
-window.neueKarte = () => { const s = stoff(); let src = s.quellen.find(q => q.manuell); if (!src){ src = {id: uid(), name: "Von Hand angelegt", manuell: true, zeichen: 0}; s.quellen.push(src); }
+window.neueKarte = () => { const s = stoff(); let src = s.quellen.find(q => q.manuell); if (!src){ src = {id: uid(), name: t("manualSrc"), manuell: true, zeichen: 0}; s.quellen.push(src); }
   s.karten.push({id: "k" + uid(), f: "", a: "", t: "", art: "manuell", src: src.id}); save(); go("editor", {src: src.id}); };
 
 /* ---------- Lernkarten ---------- */
@@ -386,10 +611,10 @@ V.karten = () => {
   const s = stoff(), l = L();
   const themen = [...new Set(s.karten.map(c => c.t))].sort();
   const rows = themen.map(t => { const cs = s.karten.filter(c => c.t === t), due = cs.filter(c => l.cards[c.id] && l.cards[c.id].due < dueEnd()).length, neu = cs.filter(c => !l.cards[c.id]).length;
-    return `<tr><td>${esc(t || "ohne Thema")}</td><td class="n">${due}</td><td class="n">${neu}</td><td class="n">${cs.length}</td></tr>`; }).join("");
-  app(`<h2>Lernkarten</h2><div class="card"><p class="small muted" style="margin-top:0">Frage lesen, Antwort im Kopf formulieren, aufdecken, ehrlich bewerten. Was sitzt, kommt seltener dran.</p>
-  <div class="row"><select id="kb">${topts("", s.karten)}</select><button class="btn p" onclick="go('lernen',{t:$('#kb').value})" ${s.karten.length?"":"disabled"}>Lernen</button></div></div>
-  ${rows ? `<div class="card tw"><table><tr><th>Thema</th><th class="n">fällig</th><th class="n">neu</th><th class="n">gesamt</th></tr>${rows}</table></div>` : '<div class="card muted">Noch keine Karten. Unter Stoff Unterlagen hochladen.</div>'}`);
+    return `<tr><td>${esc(t || T[ui()].noTopic)}</td><td class="n">${due}</td><td class="n">${neu}</td><td class="n">${cs.length}</td></tr>`; }).join("");
+  app(`<h2>${t("kartenTitle")}</h2><div class="card"><p class="small muted" style="margin-top:0">${t("kartenHint")}</p>
+  <div class="row"><select id="kb">${topts("", s.karten)}</select><button class="btn p" onclick="go('lernen',{t:$('#kb').value})" ${s.karten.length?"":"disabled"}>${t("learn")}</button></div></div>
+  ${rows ? `<div class="card tw"><table><tr><th>${t("thTopic")}</th><th class="n">${t("thDue")}</th><th class="n">${t("thNew")}</th><th class="n">${t("thTotal")}</th></tr>${rows}</table></div>` : `<div class="card muted">${t("noCards")}</div>`}`);
 };
 function buildQueue(o){
   const s = stoff(), l = L(), f = c => !o.t || c.t === o.t;
@@ -400,16 +625,16 @@ function buildQueue(o){
 V.lernen = o => { deckOpts = o || {}; queue = buildQueue(deckOpts); nextCard(); };
 function nextCard(){
   const s = stoff(), l = L();
-  if (!queue.length){ app(`<div class="card"><h2>Für jetzt erledigt</h2><p class="muted">${esc(mut("done"))}</p><p>Keine fälligen Karten ${deckOpts.t ? "in diesem Thema " : ""}mehr. Morgen geht es weiter.</p>
-    <div class="row"><button class="btn" onclick="go('karten')">Zurück</button>${s.karten.some(c => !l.cards[c.id] && (!deckOpts.t||c.t===deckOpts.t)) ? `<button class="btn" onclick="extraNeu()">10 weitere neue Karten</button>` : ""}</div></div>`); return; }
+  if (!queue.length){ app(`<div class="card"><h2>${t("doneTitle")}</h2><p class="muted">${esc(mut("done"))}</p><p>${t("noDue", !!deckOpts.t)}</p>
+    <div class="row"><button class="btn" onclick="go('karten')">${t("backPlain")}</button>${s.karten.some(c => !l.cards[c.id] && (!deckOpts.t||c.t===deckOpts.t)) ? `<button class="btn" onclick="extraNeu()">${t("more10")}</button>` : ""}</div></div>`); return; }
   cur = byId()[queue[0]]; if (!cur || !cur.f){ queue.shift(); return nextCard(); }
-  app(`<div class="row" style="justify-content:space-between"><button class="btn sm" onclick="go('karten')">← Beenden</button><span class="small muted">noch ${queue.length}</span></div>
-  <div class="card" style="margin-top:10px">${cur.t?`<span class="tag">${esc(cur.t)}</span>`:""}${!l.cards[cur.id]?' <span class="tag">neu</span>':""}
+  app(`<div class="row" style="justify-content:space-between"><button class="btn sm" onclick="go('karten')">${t("quit")}</button><span class="small muted">${t("left", queue.length)}</span></div>
+  <div class="card" style="margin-top:10px">${cur.t?`<span class="tag">${esc(cur.t)}</span>`:""}${!l.cards[cur.id]?` <span class="tag">${t("tagNew")}</span>`:""}
    <div class="q">${esc(cur.f)}</div>
    <div id="back" hidden><div class="ans">${esc(cur.a)}</div>
-    <div class="rate">${["Nochmal","Schwer","Gut","Leicht"].map((lb,i) => `<button class="btn" onclick="rate(${i})">${lb}<small>${preview(cur.id,i)}</small></button>`).join("")}</div></div>
-   <button id="show" class="btn p" style="width:100%;margin-top:8px" onclick="$('#back').hidden=false;this.remove()">Antwort zeigen</button></div>
-  <p class="small muted">Tastatur: Leertaste = aufdecken, 1–4 = bewerten.</p>`);
+    <div class="rate">${t("rates").map((lb,i) => `<button class="btn" onclick="rate(${i})">${lb}<small>${preview(cur.id,i)}</small></button>`).join("")}</div></div>
+   <button id="show" class="btn p" style="width:100%;margin-top:8px" onclick="$('#back').hidden=false;this.remove()">${t("showAns")}</button></div>
+  <p class="small muted">${t("keysHint")}</p>`);
 }
 window.extraNeu = () => { const l = L(); queue = stoff().karten.filter(c => (!deckOpts.t || c.t === deckOpts.t) && !l.cards[c.id]).slice(0,10).map(c=>c.id); nextCard(); };
 window.rate = q => { const id = queue.shift(), l = L(); const isNew = !l.cards[id]; schedule(id, q); if (isNew){ l.cards[id].first = Date.now(); save(); }
@@ -425,13 +650,13 @@ document.addEventListener("keydown", e => {
 let mcQ = [], mcI = 0, mcOpts = {}, mcSel = [], mcStats = {n:0, ok:0};
 V.fragen = () => {
   const s = stoff(), l = L(), m = byId(), fl = Object.keys(l.fehler).filter(id => m[id]).length, fertig = mcFertig();
-  app(`<h2>Fragen trainieren</h2>
-  <div class="card"><p class="small muted" style="margin-top:0">Multiple-Choice mit sofortiger Erklärung. Falsch beantwortete Fragen landen in der Fehlerliste und bleiben dort, bis sie zweimal hintereinander richtig beantwortet wurden.</p>
+  app(`<h2>${t("fragenTitle")}</h2>
+  <div class="card"><p class="small muted" style="margin-top:0">${t("fragenHint")}</p>
   <div class="row"><select id="mb">${topts("", fertig)}</select><select id="mn">${[10,20,30,50].map(n=>`<option>${n}</option>`).join("")}</select>
-  <button class="btn p" onclick="startMC({t:$('#mb').value,n:+$('#mn').value})" ${fertig.length?"":"disabled"}>Starten</button></div></div>
-  <div class="card"><h3 style="margin-top:0">Fehlerliste (${fl})</h3>
-  ${fl ? `<button class="btn p" onclick="startMC({fehler:true})">Fehlerliste üben</button><ul class="small">${Object.keys(l.fehler).filter(id=>m[id]).slice(0,40).map(id => `<li>${esc(m[id].f)} <span class="muted">(${l.fehler[id]}/2)</span></li>`).join("")}</ul>` : '<p class="muted">Leer.</p>'}</div>
-  <p class="small muted">${fertig.length} Fragen abfragbar${s.mc.length > fertig.length ? `, ${s.mc.length - fertig.length} ohne Lösung (Editor)` : ""}.</p>`);
+  <button class="btn p" onclick="startMC({t:$('#mb').value,n:+$('#mn').value})" ${fertig.length?"":"disabled"}>${t("startBtn")}</button></div></div>
+  <div class="card"><h3 style="margin-top:0">${t("errList", fl)}</h3>
+  ${fl ? `<button class="btn p" onclick="startMC({fehler:true})">${t("practiceErr")}</button><ul class="small">${Object.keys(l.fehler).filter(id=>m[id]).slice(0,40).map(id => `<li>${esc(m[id].f)} <span class="muted">(${l.fehler[id]}/2)</span></li>`).join("")}</ul>` : `<p class="muted">${t("empty")}</p>`}</div>
+  <p class="small muted">${t("avail", fertig.length, s.mc.length - fertig.length)}</p>`);
 };
 window.startMC = o => { mcOpts = o; const l = L(), m = byId();
   let pool = o.fehler ? Object.keys(l.fehler).filter(id => m[id] && m[id].o && m[id].r && m[id].r.length).map(id => m[id]) : mcFertig().filter(q => !o.t || q.t === o.t);
@@ -439,12 +664,12 @@ window.startMC = o => { mcOpts = o; const l = L(), m = byId();
   mcQ = pool.slice(0, o.fehler ? 30 : (o.n || 10)).map(q => ({q, perm: shuffle(q.o.map((_,i)=>i).filter(i => q.o[i]))})); mcI = 0; mcStats = {n:0, ok:0}; go("mc"); };
 V.mc = () => {
   if (!mcQ.length) return go("fragen");
-  if (mcI >= mcQ.length){ app(`<div class="card"><h2>Runde beendet</h2><p>${mcStats.ok} von ${mcStats.n} richtig.</p><p class="muted">${esc(mutRound(mcStats.ok, mcStats.n))}</p><div class="row"><button class="btn p" onclick="startMC(mcOpts)">Neue Runde</button><button class="btn" onclick="go('fragen')">Zurück</button></div></div>`); return; }
+  if (mcI >= mcQ.length){ app(`<div class="card"><h2>${t("roundDone")}</h2><p>${t("roundRes", mcStats.ok, mcStats.n)}</p><p class="muted">${esc(mutRound(mcStats.ok, mcStats.n))}</p><div class="row"><button class="btn p" onclick="startMC(mcOpts)">${t("newRound")}</button><button class="btn" onclick="go('fragen')">${t("backPlain")}</button></div></div>`); return; }
   const {q, perm} = mcQ[mcI]; mcSel = []; const multi = q.r.length > 1;
-  app(`<div class="row" style="justify-content:space-between"><button class="btn sm" onclick="go('fragen')">← Beenden</button><span class="small muted">${mcI+1} / ${mcQ.length}</span></div>
-  <div class="card" style="margin-top:10px">${q.t?`<span class="tag">${esc(q.t)}</span>`:""}<div class="q">${esc(q.f)}</div>${multi?'<p class="small muted">Mehrere Antworten richtig – alle auswählen, dann prüfen.</p>':""}
+  app(`<div class="row" style="justify-content:space-between"><button class="btn sm" onclick="go('fragen')">${t("quit")}</button><span class="small muted">${mcI+1} / ${mcQ.length}</span></div>
+  <div class="card" style="margin-top:10px">${q.t?`<span class="tag">${esc(q.t)}</span>`:""}<div class="q">${esc(q.f)}</div>${multi?`<p class="small muted">${t("multiHint")}</p>`:""}
   <div id="opts">${perm.map((oi,k) => `<button class="opt" data-i="${oi}" onclick="mcPick(${oi},this)">${String.fromCharCode(65+k)}) ${esc(q.o[oi])}</button>`).join("")}</div>
-  ${multi?'<button class="btn p" id="chk" onclick="mcCheck()">Prüfen</button>':""}<div id="fb"></div></div>`);
+  ${multi?`<button class="btn p" id="chk" onclick="mcCheck()">${t("check")}</button>`:""}<div id="fb"></div></div>`);
 };
 window.mcPick = (i, el) => { const {q} = mcQ[mcI]; if ($("#fb").innerHTML) return;
   if (q.r.length > 1){ el.classList.toggle("sel"); mcSel = mcSel.includes(i) ? mcSel.filter(x=>x!==i) : mcSel.concat(i); return; }
@@ -456,9 +681,9 @@ window.mcCheck = () => {
   const m = l.mc[q.id] || {n:0, ok:0}; m.n++; if (ok) m.ok++; m.last = Date.now(); l.mc[q.id] = m;
   if (!ok) l.fehler[q.id] = 0; else if (q.id in l.fehler){ l.fehler[q.id]++; if (l.fehler[q.id] >= 2) delete l.fehler[q.id]; }
   mcStats.n++; if (ok) mcStats.ok++; logToday("fragen"); save();
-  const st = q.id in l.fehler ? `<span class="small muted"> · Fehlerliste ${l.fehler[q.id]}/2</span>` : "";
-  $("#fb").innerHTML = `<div class="ans"><b class="${ok?"ok-t":"bad-t"}">${ok?"Richtig.":"Nicht richtig."}</b> <span class="muted">${esc(mut(ok?"ok":"bad"))}</span>${st}${q.e?`<div style="margin-top:6px">${esc(q.e)}</div>`:""}</div>
-   <button class="btn p" style="width:100%;margin-top:12px" onclick="mcI++;V.mc()">Weiter</button>`;
+  const st = q.id in l.fehler ? `<span class="small muted">${t("errState", l.fehler[q.id])}</span>` : "";
+  $("#fb").innerHTML = `<div class="ans"><b class="${ok?"ok-t":"bad-t"}">${ok?t("right"):t("wrong")}</b> <span class="muted">${esc(mut(ok?"ok":"bad"))}</span>${st}${q.e?`<div style="margin-top:6px">${esc(q.e)}</div>`:""}</div>
+   <button class="btn p" style="width:100%;margin-top:12px" onclick="mcI++;V.mc()">${t("next")}</button>`;
   const c = $("#chk"); if (c) c.remove();
 };
 
@@ -466,13 +691,13 @@ window.mcCheck = () => {
 let sim = null;
 V.pruefung = () => {
   const l = L(), fertig = mcFertig(), n = Math.min(S.simN, fertig.length);
-  const hist = l.sims.slice().reverse().map(x => `<tr><td>${new Date(x.t).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"})}</td><td class="n">${x.ok}/${x.n}</td><td class="n">${x.pct} %</td><td class="n">${Math.round(x.dauer/60)} min</td></tr>`).join("");
-  app(`<h2>Prüfungssimulation</h2><div class="card prose"><p style="margin-top:0">Wie in einer echten Prüfung: Fragen gemischt über alle Themen, Rückmeldung erst am Ende, Zeit läuft. Falsche Antworten landen danach in der Fehlerliste.</p>
-  <div class="row"><label class="small muted" for="sn">Fragen</label><select id="sn" onchange="S.simN=+this.value;save();V.pruefung()">${[10,15,20,30,40,50].map(x=>`<option ${S.simN==x?"selected":""}>${x}</option>`).join("")}</select>
-  <label class="small muted" for="sm">Minuten</label><select id="sm" onchange="S.simMin=+this.value;save()">${[10,15,20,30,45,60,90].map(x=>`<option ${S.simMin==x?"selected":""}>${x}</option>`).join("")}</select></div>
-  <p class="small muted">${fertig.length} Fragen verfügbar${fertig.length < S.simN ? ", die Simulation nutzt alle " + fertig.length : ""}.</p>
-  ${sim && !sim.done ? `<button class="btn p" onclick="go('sim')">Laufende Simulation fortsetzen</button>` : `<button class="btn p" onclick="simStart()" ${n>=5?"":"disabled"}>Simulation starten</button>`}</div>
-  <div class="card"><h3 style="margin-top:0">Verlauf</h3>${hist ? `<div class="tw"><table><tr><th>Datum</th><th class="n">richtig</th><th class="n">Quote</th><th class="n">Dauer</th></tr>${hist}</table></div>` : '<p class="muted">Noch keine Simulation.</p>'}</div>`);
+  const hist = l.sims.slice().reverse().map(x => `<tr><td>${new Date(x.t).toLocaleString(loc(),{dateStyle:"short",timeStyle:"short"})}</td><td class="n">${x.ok}/${x.n}</td><td class="n">${x.pct} %</td><td class="n">${Math.round(x.dauer/60)} min</td></tr>`).join("");
+  app(`<h2>${t("simTitle")}</h2><div class="card prose"><p style="margin-top:0">${t("simHint")}</p>
+  <div class="row"><label class="small muted" for="sn">${t("qs")}</label><select id="sn" onchange="S.simN=+this.value;save();V.pruefung()">${[10,15,20,30,40,50].map(x=>`<option ${S.simN==x?"selected":""}>${x}</option>`).join("")}</select>
+  <label class="small muted" for="sm">${t("mins")}</label><select id="sm" onchange="S.simMin=+this.value;save()">${[10,15,20,30,45,60,90].map(x=>`<option ${S.simMin==x?"selected":""}>${x}</option>`).join("")}</select></div>
+  <p class="small muted">${t("simAvail", fertig.length, fertig.length < S.simN)}</p>
+  ${sim && !sim.done ? `<button class="btn p" onclick="go('sim')">${t("resume")}</button>` : `<button class="btn p" onclick="simStart()" ${n>=5?"":"disabled"}>${t("simStart")}</button>`}</div>
+  <div class="card"><h3 style="margin-top:0">${t("history")}</h3>${hist ? `<div class="tw"><table><tr><th>${t("thDate")}</th><th class="n">${t("thRight")}</th><th class="n">${t("thRate")}</th><th class="n">${t("thDur")}</th></tr>${hist}</table></div>` : `<p class="muted">${t("noSim")}</p>`}</div>`);
 };
 window.simStart = () => {
   const fertig = mcFertig(), N = Math.min(S.simN, fertig.length), pool = shuffle(fertig.slice()), by = {};
@@ -491,17 +716,17 @@ V.sim = () => {
   const m = byId(), N = sim.qs.length, s = sim.qs[sim.i], q = m[s.id], answered = sim.qs.filter(x => x.a !== null).length;
   if (!q){ sim.qs.splice(sim.i,1); sim.i = Math.min(sim.i, sim.qs.length-1); return sim.qs.length ? V.sim() : simEnd(); }
   const multi = q.r.length > 1, sel = Array.isArray(s.a) ? s.a : (s.a === null ? [] : [s.a]);
-  app(`<div class="row" style="justify-content:space-between"><span class="timer">⏱ <span id="tm"></span></span><span class="small muted">${answered}/${N} beantwortet</span></div>
-  <div class="card" style="margin-top:10px"><span class="small muted">Frage ${sim.i+1} von ${N}${multi?" · mehrere richtig":""}</span><div class="q">${esc(q.f)}</div>
+  app(`<div class="row" style="justify-content:space-between"><span class="timer">⏱ <span id="tm"></span></span><span class="small muted">${t("answered", answered, N)}</span></div>
+  <div class="card" style="margin-top:10px"><span class="small muted">${t("qOf", sim.i+1, N)}${multi?t("multiShort"):""}</span><div class="q">${esc(q.f)}</div>
   ${s.perm.map((oi,k) => `<button class="opt ${sel.includes(oi)?"sel":""}" onclick="simPick(${oi},${multi})">${String.fromCharCode(65+k)}) ${esc(q.o[oi])}</button>`).join("")}
-  <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn" onclick="sim.i--;V.sim()" ${sim.i?"":"disabled"}>← Zurück</button>
-  <button class="btn ${sim.i<N-1?"p":""}" onclick="sim.i++;V.sim()" ${sim.i<N-1?"":"disabled"}>Weiter →</button></div></div>
+  <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn" onclick="sim.i--;V.sim()" ${sim.i?"":"disabled"}>${t("back")}</button>
+  <button class="btn ${sim.i<N-1?"p":""}" onclick="sim.i++;V.sim()" ${sim.i<N-1?"":"disabled"}>${t("nextArrow")}</button></div></div>
   <div class="card"><div class="grid50">${sim.qs.map((x,k) => `<button class="${x.a!==null?"a":""} ${k===sim.i?"c":""}" onclick="sim.i=${k};V.sim()">${k+1}</button>`).join("")}</div>
-  <div class="row" style="margin-top:12px"><button class="btn p" onclick="askAbgabe()">Abgeben</button></div><div id="abg"></div></div>`);
+  <div class="row" style="margin-top:12px"><button class="btn p" onclick="askAbgabe()">${t("submit")}</button></div><div id="abg"></div></div>`);
   simTick();
 };
 window.simPick = (oi, multi) => { const s = sim.qs[sim.i]; if (!multi){ s.a = oi; } else { const sel = Array.isArray(s.a) ? s.a : []; s.a = sel.includes(oi) ? sel.filter(x => x !== oi) : sel.concat(oi); if (!s.a.length) s.a = null; } V.sim(); };
-window.askAbgabe = () => { const open = sim.qs.filter(x => x.a === null).length; $("#abg").innerHTML = `<div class="confirm">${open ? `Noch ${open} Fragen offen. ` : ""}Prüfung abgeben?<div class="row" style="margin-top:8px"><button class="btn p" onclick="simEnd()">Ja, abgeben</button><button class="btn sm" onclick="$('#abg').innerHTML=''">Weiter bearbeiten</button></div></div>`; };
+window.askAbgabe = () => { const open = sim.qs.filter(x => x.a === null).length; $("#abg").innerHTML = `<div class="confirm">${open ? t("openQ", open) : ""}${t("submitQ")}<div class="row" style="margin-top:8px"><button class="btn p" onclick="simEnd()">${t("yesSubmit")}</button><button class="btn sm" onclick="$('#abg').innerHTML=''">${t("keepEdit")}</button></div></div>`; };
 window.simEnd = () => {
   if (!sim || sim.done) return; sim.done = true; clearInterval(timerH); timerH = null; $("#hdr").textContent = "";
   const m = byId(), l = L(), N = sim.qs.length;
@@ -514,27 +739,24 @@ window.simEnd = () => {
 V.simres = r => {
   r = r || L().sims[L().sims.length-1]; const m = byId(), by = {};
   r.detail.forEach(d => { by[d.t] = by[d.t] || {n:0, ok:0}; by[d.t].n++; if (d.ok) by[d.t].ok++; });
-  app(`<div class="card"><h2 style="margin-top:0">${r.ok} von ${r.n} richtig (${r.pct} %)</h2>
-  <p>${esc(mutSim(r.pct))}</p><p class="muted small">Dauer ${Math.round(r.dauer/60)} min. Falsche Antworten wurden in die Fehlerliste übernommen.</p>
-  <div class="tw"><table><tr><th>Thema</th><th class="n">richtig</th><th class="n">Quote</th></tr>${Object.entries(by).sort((a,b)=>a[1].ok/a[1].n-b[1].ok/b[1].n).map(([t,s]) => `<tr><td>${esc(t||"ohne Thema")}</td><td class="n">${s.ok}/${s.n}</td><td class="n">${Math.round(100*s.ok/s.n)} %</td></tr>`).join("")}</table></div></div>
-  <h3>Durchsicht</h3>${r.detail.map((d,k) => { const q = m[d.id]; if (!q) return ""; const sel = Array.isArray(d.a) ? d.a : (d.a === null ? [] : [d.a]); return `<div class="card small"><b>${k+1}. ${esc(q.f)}</b>
-   ${q.o.map((o,i) => `<div class="${q.r.includes(i)?"ok-t":sel.includes(i)?"bad-t":"muted"}">${q.r.includes(i)?"✓":sel.includes(i)?"✗":"·"} ${esc(o)}</div>`).join("")}${!sel.length?'<div class="bad-t">nicht beantwortet</div>':""}${q.e?`<div class="muted" style="margin-top:4px">${esc(q.e)}</div>`:""}</div>`; }).join("")}
-  <button class="btn" onclick="go('pruefung')">Zurück</button>`);
+  app(`<div class="card"><h2 style="margin-top:0">${t("resTitle", r.ok, r.n, r.pct)}</h2>
+  <p>${esc(mutSim(r.pct))}</p><p class="muted small">${t("duration", Math.round(r.dauer/60))}</p>
+  <div class="tw"><table><tr><th>${t("thTopic")}</th><th class="n">${t("thRight")}</th><th class="n">${t("thRate")}</th></tr>${Object.entries(by).sort((a,b)=>a[1].ok/a[1].n-b[1].ok/b[1].n).map(([t,s]) => `<tr><td>${esc(t||T[ui()].noTopic)}</td><td class="n">${s.ok}/${s.n}</td><td class="n">${Math.round(100*s.ok/s.n)} %</td></tr>`).join("")}</table></div></div>
+  <h3>${t("review")}</h3>${r.detail.map((d,k) => { const q = m[d.id]; if (!q) return ""; const sel = Array.isArray(d.a) ? d.a : (d.a === null ? [] : [d.a]); return `<div class="card small"><b>${k+1}. ${esc(q.f)}</b>
+   ${q.o.map((o,i) => `<div class="${q.r.includes(i)?"ok-t":sel.includes(i)?"bad-t":"muted"}">${q.r.includes(i)?"✓":sel.includes(i)?"✗":"·"} ${esc(o)}</div>`).join("")}${!sel.length?`<div class="bad-t">${t("notAnswered")}</div>`:""}${q.e?`<div class="muted" style="margin-top:4px">${esc(q.e)}</div>`:""}</div>`; }).join("")}
+  <button class="btn" onclick="go('pruefung')">${t("backPlain")}</button>`);
 };
 
 /* ---------- Mehr ---------- */
-V.mehr = () => app(`<h2>Mehr</h2><div class="card list">
-  <button class="item" onclick="go('stat')"><span>Schwachstellen &amp; Statistik</span><span></span></button>
-  <button class="item" onclick="go('daten')"><span>Daten: Fragenpaket &amp; Lernstand sichern, importieren</span><span></span></button>
-  <button class="item" onclick="go('neu')"><span>Neuen Stoff anlegen</span><span></span></button>
-  <button class="item" onclick="go('hilfe')"><span>So funktioniert die App</span><span></span></button></div>`);
-V.hilfe = () => app(`<button class="btn sm" onclick="go('mehr')">← Mehr</button><h2>So funktioniert die App</h2><div class="card prose">
-  <p style="margin-top:0"><b>Offline.</b> Nach dem ersten Öffnen läuft alles auf diesem Gerät: PDF-Lesen, Texterkennung für Fotos und Screenshots, Fragenerzeugung, Lernen. Kein Server, keine KI im Netz. Die Daten liegen nur in diesem Browser.</p>
-  <p><b>Fragen erzeugen.</b> Die App sucht im Text zuerst nach vorhandenen Prüfungsfragen (Frage mit Antwortmöglichkeiten a/b/c, Kästchen, Lösungsangabe) und übernimmt sie. Aus Fließtext baut sie Definitionsfragen („Was ist …?“), Aufzählungen („Nenne alle …“), Lückentexte und Zahlenfragen; falsche Antwortmöglichkeiten kommen aus demselben Text. Überschriften werden zu Themen.</p>
-  <p><b>Editor.</b> Weil Regeln keinen Verstand haben, lohnt der Blick in den Editor: unpassende Fragen löschen, Texte glätten, bei Prüfungsfragen ohne Lösungsangabe die richtige Antwort ankreuzen. Fragen ohne Kreuz werden nicht abgefragt.</p>
-  <p><b>Lernen.</b> Karten folgen dem SM-2-Verfahren: nach jeder Bewertung rückt die nächste Wiederholung weiter in die Zukunft, bei „Nochmal“ kommt die Karte in 10 Minuten wieder. Fragen wandern bei Fehlern in die Fehlerliste und verlassen sie nach zwei richtigen Antworten in Folge. Die Simulation mischt Fragen über alle Themen und wertet erst am Ende aus.</p>
-  <p><b>Sprache.</b> Je Stoff wählbar (Deutsch, Englisch oder Malayalam, beim Anlegen oder unter Stoff → Stoff verwalten). Sie bestimmt, welches Sprachpaket die Texterkennung nutzt und nach welchen Mustern Fragen gebaut werden. Die Bedienung der App bleibt deutsch.</p>
-  <p><b>Fotos.</b> Gut ausgeleuchtet, gerade, scharf, eine Seite je Foto. Die Texterkennung braucht beim ersten Mal einige Sekunden zum Vorbereiten und je Seite etwa 5–20 Sekunden.</p></div>`);
+V.mehr = () => app(`<h2>${t("mehrTitle")}</h2>
+  <div class="card"><h3 style="margin-top:0">${t("settings")}</h3><div class="row"><label for="uil" class="small muted">${t("uiLang")}</label><select id="uil" onchange="setUiLang(this.value)">${UI_LANGS.map(([v,n]) => `<option value="${v}" ${ui()===v?"selected":""}>${n}</option>`).join("")}</select></div></div>
+  <div class="card list">
+  <button class="item" onclick="go('stat')"><span>${t("m_stat")}</span><span></span></button>
+  <button class="item" onclick="go('daten')"><span>${t("m_daten")}</span><span></span></button>
+  <button class="item" onclick="go('neu')"><span>${t("m_neu")}</span><span></span></button>
+  <button class="item" onclick="go('hilfe')"><span>${t("m_hilfe")}</span><span></span></button></div>`);
+V.hilfe = () => app(`<button class="btn sm" onclick="go('mehr')">${t("backMehr")}</button><h2>${t("m_hilfe")}</h2><div class="card prose">
+  ${t("hilfeHtml")}</div>`);
 V.stat = () => {
   const s = stoff(), l = L();
   const themen = [...new Set(s.mc.map(q => q.t))];
@@ -542,37 +764,37 @@ V.stat = () => {
   const hart = s.karten.filter(c => l.cards[c.id] && l.cards[c.id].lapses >= 2).sort((a,b)=>l.cards[b.id].lapses-l.cards[a.id].lapses).slice(0,15);
   const days = Object.keys(l.log).sort().slice(-14);
   const tot = {k: Object.keys(l.cards).length, f: Object.values(l.mc).reduce((a,m)=>a+m.n,0), ok: Object.values(l.mc).reduce((a,m)=>a+m.ok,0)};
-  app(`<h2>Schwachstellen</h2><div class="card tw">${weak.length ? `<table><tr><th>Thema</th><th class="n">Fehlerquote</th><th class="n">beantwortet</th><th></th></tr>${weak.map(r => `<tr><td>${esc(r.t||"ohne Thema")}</td><td class="n">${Math.round(100*(1-r.s.ok/r.s.n))} %</td><td class="n">${r.s.n}</td><td><button class="btn sm" onclick="startMC({t:'${esc(r.t).replace(/'/g,"")}',n:20})">üben</button></td></tr>`).join("")}</table>` : '<p class="muted">Noch keine Fragen beantwortet.</p>'}</div>
-  ${hart.length ? `<div class="card"><h3 style="margin-top:0">Karten, die oft vergessen werden</h3><ul class="small">${hart.map(c => `<li>${esc(c.f)} <span class="muted">(${l.cards[c.id].lapses}×)</span></li>`).join("")}</ul></div>` : ""}
-  <h2>Statistik</h2><div class="kpi"><div><span class="muted small">Karten begonnen</span><b>${tot.k}/${s.karten.length}</b></div><div><span class="muted small">Fragen beantwortet</span><b>${tot.f}</b></div><div><span class="muted small">davon richtig</span><b>${tot.f?Math.round(100*tot.ok/tot.f)+" %":"–"}</b></div></div>
-  <div class="card" style="margin-top:14px"><h3 style="margin-top:0">Letzte 14 Lerntage</h3>${days.length ? `<table><tr><th>Tag</th><th class="n">Karten</th><th class="n">Fragen</th></tr>${days.reverse().map(d => `<tr><td>${new Date(d).toLocaleDateString("de-DE")}</td><td class="n">${l.log[d].karten||0}</td><td class="n">${l.log[d].fragen||0}</td></tr>`).join("")}</table>` : '<p class="muted">Noch nichts.</p>'}</div>`);
+  app(`<h2>${t("weakTitle")}</h2><div class="card tw">${weak.length ? `<table><tr><th>${t("thTopic")}</th><th class="n">${t("thErr")}</th><th class="n">${t("thAnswered")}</th><th></th></tr>${weak.map(r => `<tr><td>${esc(r.t||t("noTopic"))}</td><td class="n">${Math.round(100*(1-r.s.ok/r.s.n))} %</td><td class="n">${r.s.n}</td><td><button class="btn sm" onclick="startMC({t:'${esc(r.t).replace(/'/g,"")}',n:20})">${t("practice")}</button></td></tr>`).join("")}</table>` : `<p class="muted">${t("noneAnswered")}</p>`}</div>
+  ${hart.length ? `<div class="card"><h3 style="margin-top:0">${t("forgotten")}</h3><ul class="small">${hart.map(c => `<li>${esc(c.f)} <span class="muted">(${l.cards[c.id].lapses}×)</span></li>`).join("")}</ul></div>` : ""}
+  <h2>${t("statTitle")}</h2><div class="kpi"><div><span class="muted small">${t("kStarted")}</span><b>${tot.k}/${s.karten.length}</b></div><div><span class="muted small">${t("kAnswered")}</span><b>${tot.f}</b></div><div><span class="muted small">${t("kRight")}</span><b>${tot.f?Math.round(100*tot.ok/tot.f)+" %":"–"}</b></div></div>
+  <div class="card" style="margin-top:14px"><h3 style="margin-top:0">${t("last14")}</h3>${days.length ? `<table><tr><th>${t("thDay")}</th><th class="n">${t("thCards")}</th><th class="n">${t("thQs")}</th></tr>${days.reverse().map(d => `<tr><td>${new Date(d).toLocaleDateString(loc())}</td><td class="n">${l.log[d].karten||0}</td><td class="n">${l.log[d].fragen||0}</td></tr>`).join("")}</table>` : `<p class="muted">${t("nothingYet")}</p>`}</div>`);
 };
-V.daten = () => app(`<h2>Daten</h2>
-  <div class="card prose"><h3 style="margin-top:0">Fragenpaket</h3><p>Ein Fragenpaket enthält Karten und Fragen eines Stoffs (ohne Lernstand). Damit lässt sich ein Stoff auf ein anderes Gerät bringen oder weitergeben. Beim Import entsteht ein neuer Stoff, oder die Fragen werden einem gleichnamigen hinzugefügt.</p>
-  <div class="row"><button class="btn p" onclick="exportStoff()" ${stoff()?"":"disabled"}>Aktuellen Stoff exportieren</button><label class="btn" for="impP">Fragenpaket importieren …</label><input type="file" id="impP" accept="application/json,.json" hidden onchange="importPaket(this.files[0])"></div>
-  <details class="small muted" style="margin-top:10px"><summary>Format für selbst erstellte Pakete</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{"stofftrainer":1,"name":"Fahrradprüfung",
+V.daten = () => app(`<h2>${t("datenTitle")}</h2>
+  <div class="card prose"><h3 style="margin-top:0">${t("pkgTitle")}</h3><p>${t("pkgText")}</p>
+  <div class="row"><button class="btn p" onclick="exportStoff()" ${stoff()?"":"disabled"}>${t("exportCur")}</button><label class="btn" for="impP">${t("importPkg")}</label><input type="file" id="impP" accept="application/json,.json" hidden onchange="importPaket(this.files[0])"></div>
+  <details class="small muted" style="margin-top:10px"><summary>${t("formatSum")}</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{"stofftrainer":1,"name":"Fahrradprüfung",
  "karten":[{"t":"Thema","f":"Frage","a":"Antwort"}],
  "mc":[{"t":"Thema","f":"Frage","o":["A","B","C","D"],"r":0,"e":"Erklärung"}]}</pre></details></div>
-  <div class="card prose"><h3 style="margin-top:0">Alles sichern</h3><p>Alle Stoffe samt Lernstand als Datei. Der Import ersetzt den gesamten Bestand in diesem Browser.</p>
-  <div class="row"><button class="btn" onclick="exportAll()">Alles exportieren</button><label class="btn" for="impA">Sicherung importieren …</label><input type="file" id="impA" accept="application/json,.json" hidden onchange="importAll(this.files[0])"></div></div>`);
+  <div class="card prose"><h3 style="margin-top:0">${t("backupTitle")}</h3><p>${t("backupText")}</p>
+  <div class="row"><button class="btn" onclick="exportAll()">${t("exportAll")}</button><label class="btn" for="impA">${t("importBackup")}</label><input type="file" id="impA" accept="application/json,.json" hidden onchange="importAll(this.files[0])"></div></div>`);
 function saveFile(fn, json){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([json], {type:"application/json"})); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9äöüß]+/g,"-").replace(/^-|-$/g,"").slice(0,40) || "stoff";
 window.exportStoff = () => { const s = stoff(); if (!s) return; saveFile("stofftrainer-" + slug(s.name) + ".json", JSON.stringify({stofftrainer:1, name:s.name, sprache:s.sprache||"de", karten:s.karten.map(({f,a,t})=>({t,f,a})), mc:s.mc.map(({f,o,r,e,t})=>({t,f,o,r,e}))}, null, 1)); };
 window.exportAll = () => saveFile("stofftrainer-sicherung-" + new Date().toISOString().slice(0,10) + ".json", JSON.stringify(S, null, 1));
-function readJson(f, cb){ if (!f) return; const r = new FileReader(); r.onload = () => { try { cb(JSON.parse(r.result)); } catch(e){ toast("Datei ist kein gültiges JSON."); } }; r.readAsText(f); }
+function readJson(f, cb){ if (!f) return; const r = new FileReader(); r.onload = () => { try { cb(JSON.parse(r.result)); } catch(e){ toast(t("badJson")); } }; r.readAsText(f); }
 window.importPaket = f => readJson(f, j => {
-  if (!j || (!Array.isArray(j.karten) && !Array.isArray(j.mc))){ toast("Kein Fragenpaket."); return; }
-  const name = String(j.name || "Importiert").slice(0,60);
+  if (!j || (!Array.isArray(j.karten) && !Array.isArray(j.mc))){ toast(t("notPkg")); return; }
+  const name = String(j.name || t("importedName")).slice(0,60);
   let s = Object.values(S.stoffe).find(x => x.name === name);
   if (!s){ const id = uid(); s = S.stoffe[id] = {id, name, sprache: ["en","ml"].includes(j.sprache) ? j.sprache : "de", erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; }
-  const src = uid(); s.quellen.push({id:src, name:"Import " + (f.name||""), zeichen:0});
+  const src = uid(); s.quellen.push({id:src, name:t("importSrc") + (f.name||""), zeichen:0});
   let nk = 0, nq = 0;
   for (const k of j.karten || []){ if (!k || !k.f || !k.a) continue; const id = hid("k", k.f); if (s.karten.some(x=>x.id===id)) continue; s.karten.push({id, f:String(k.f), a:String(k.a), t:String(k.t||""), art:"import", src}); nk++; }
   for (const q of j.mc || []){ if (!q || !q.f || !Array.isArray(q.o)) continue; const r = (Array.isArray(q.r) ? q.r : [q.r]).map(Number).filter(x => x >= 0 && x < q.o.length);
     const id = hid("q", q.f); if (s.mc.some(x=>x.id===id)) continue; s.mc.push({id, f:String(q.f), o:q.o.map(String), r, e:String(q.e||""), t:String(q.t||""), art:"import", src}); nq++; }
-  S.aktiv = s.id; save(); toast(`${nk} Karten, ${nq} Fragen in „${s.name}“ importiert.`); go("start");
+  S.aktiv = s.id; save(); toast(t("imported", nk, nq, s.name)); go("start");
 });
-window.importAll = f => readJson(f, j => { if (!j || !j.stoffe){ toast("Keine Sicherung des Stofftrainers."); return; } S = Object.assign(fresh(), j); if (!S.stoffe[S.aktiv]) S.aktiv = Object.keys(S.stoffe)[0] || ""; save(); toast("Sicherung importiert."); go("start"); });
+window.importAll = f => readJson(f, j => { if (!j || !j.stoffe){ toast(t("notBackup")); return; } S = Object.assign(fresh(), j); if (!S.stoffe[S.aktiv]) S.aktiv = Object.keys(S.stoffe)[0] || ""; save(); toast(t("backupOk")); applyUi(); go("start"); });
 
 /* ---------- Service Worker ---------- */
 if ("serviceWorker" in navigator && location.protocol !== "file:"){
@@ -580,7 +802,8 @@ if ("serviceWorker" in navigator && location.protocol !== "file:"){
     reg.addEventListener("updatefound", () => { const nw = reg.installing; nw && nw.addEventListener("statechange", () => { if (nw.state === "installed" && navigator.serviceWorker.controller) $("#upd").hidden = false; }); });
   }).catch(() => {});
 }
-Object.assign(window, {go, V, L, stoff});
+Object.assign(window, {go, V, L, stoff, t});
+applyUi();
 go(stoff() ? "start" : "neu");
 </script>
 </body>
