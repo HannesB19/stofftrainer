@@ -188,10 +188,13 @@ const V = {};
 V.neu = () => app(`<h2>${Object.keys(S.stoffe).length ? "Neuer Stoff" : "Willkommen"}</h2>
   <div class="card prose"><p style="margin-top:0">Ein Stoff ist ein Thema, das du lernen willst: Fahrradprüfung, Erste Hilfe, Biologie 7, Führerschein-Theorie. Du lädst Unterlagen hoch (PDF, Fotos, Screenshots oder Text), die App liest sie aus, erzeugt Lernkarten und Fragen und fragt dich ab. Alles passiert auf diesem Gerät, ohne Internet.</p>
   <label for="nn" class="small muted">Name des Stoffs</label><input type="text" id="nn" placeholder="z. B. Fahrradprüfung 4. Klasse" maxlength="60">
+  <div class="row" style="margin-top:10px"><label for="nsp" class="small muted">Sprache des Stoffs</label><select id="nsp"><option value="de">Deutsch</option><option value="en">Englisch</option></select></div>
+  <p class="small muted">Die Sprache steuert Texterkennung und Fragenerzeugung. Die Bedienung bleibt deutsch.</p>
   <div class="row" style="margin-top:12px"><button class="btn p" onclick="neuStoff()">Anlegen</button>${Object.keys(S.stoffe).length?`<button class="btn" onclick="go('start')">Abbrechen</button>`:""}</div></div>
   <div class="card small muted"><b>Fertige Fragen vorhanden?</b> Unter Mehr → Daten lässt sich ein Fragenpaket (JSON) importieren.</div>`);
 window.neuStoff = () => { const n = $("#nn").value.trim(); if (!n){ $("#nn").focus(); return; }
-  const id = uid(); S.stoffe[id] = {id, name:n, erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; S.aktiv = id; save(); go("stoff"); };
+  const id = uid(); S.stoffe[id] = {id, name:n, sprache: $("#nsp").value, erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; S.aktiv = id; save(); go("stoff"); };
+const sprache = () => (stoff() && stoff().sprache) || "de";
 
 V.start = () => {
   const s = stoff(); if (!s) return V.neu();
@@ -234,7 +237,7 @@ V.stoff = () => {
   <p class="small muted" style="margin-bottom:0">Erkannte Prüfungsfragen aus dem Text werden immer übernommen; die Zahlen begrenzen nur die zusätzlich erzeugten Lückentext-, Zahlen- und Definitionsfragen. Danach im Editor durchsehen.</p></div>
   <div class="card"><h3 style="margin-top:0">Quellen in diesem Stoff</h3>${s.quellen.length ? s.quellen.map(q => `<div class="src"><span>${esc(q.name)} <span class="tag">${Math.round((q.zeichen||0)/1000)} k Zeichen</span> <span class="small muted">${s.karten.filter(c=>c.src===q.id).length} Karten · ${s.mc.filter(m=>m.src===q.id).length} Fragen</span></span><span style="white-space:nowrap"><button class="btn sm" onclick="go('editor',{src:'${q.id}'})">Editor</button> <button class="btn sm" onclick="delQuelle('${q.id}')">Entfernen</button></span></div>`).join("") : '<p class="muted">Noch keine.</p>'}
   ${s.karten.length || s.mc.length ? `<div class="row" style="margin-top:10px"><button class="btn" onclick="go('editor',{})">Alle Fragen im Editor</button><button class="btn" onclick="neueFrage()">Frage von Hand anlegen</button></div>` : ""}</div>
-  <div class="card"><h3 style="margin-top:0">Stoff verwalten</h3><div class="row"><button class="btn" onclick="umbenennen()">Umbenennen</button><button class="btn" onclick="exportStoff()">Als Fragenpaket exportieren</button><button class="btn danger" onclick="askDel()">Stoff löschen</button></div><div id="delc"></div></div>`);
+  <div class="card"><h3 style="margin-top:0">Stoff verwalten</h3><div class="row" style="margin-bottom:10px"><label for="ssp" class="small muted">Sprache</label><select id="ssp" onchange="stoff().sprache=this.value;save();toast('Sprache: '+(this.value==='en'?'Englisch':'Deutsch'))"><option value="de" ${sprache()==="de"?"selected":""}>Deutsch</option><option value="en" ${sprache()==="en"?"selected":""}>Englisch</option></select></div><div class="row"><button class="btn" onclick="umbenennen()">Umbenennen</button><button class="btn" onclick="exportStoff()">Als Fragenpaket exportieren</button><button class="btn danger" onclick="askDel()">Stoff löschen</button></div><div id="delc"></div></div>`);
   renderPend();
   const d = $("#drop");
   d.ondragover = e => { e.preventDefault(); d.classList.add("over"); }; d.ondragleave = () => d.classList.remove("over");
@@ -292,11 +295,13 @@ async function addPdf(f){
   if (all.length < 40) throw new Error("kein Text gefunden");
   pend.push({name: f.name, text: all, hinweis: ohne.length ? ohne.length + " Seite(n) per Texterkennung" + (ohne.length > 60 ? " (nur die ersten 60)" : "") : ""});
 }
-let ocrWorker = null;
+let ocrWorker = null, ocrLang = "";
 async function ocr(img, onP){
   if (!window.Tesseract) throw new Error("Texterkennung nicht verfügbar");
-  if (!ocrWorker){ st("Texterkennung wird vorbereitet (einmalig) …");
-    ocrWorker = await Tesseract.createWorker("deu", 1, {workerPath: "worker.min.js", corePath: ".", langPath: ".", gzip: true,
+  const lang = sprache() === "en" ? "eng" : "deu";
+  if (ocrWorker && ocrLang !== lang){ try { await ocrWorker.terminate(); } catch(e){} ocrWorker = null; }
+  if (!ocrWorker){ st("Texterkennung wird vorbereitet (einmalig je Sprache) …"); ocrLang = lang;
+    ocrWorker = await Tesseract.createWorker(lang, 1, {workerPath: "worker.min.js", corePath: ".", langPath: ".", gzip: true,
       logger: m => { if (m.status === "recognizing text" && onP) onP(m.progress || 0); }}); }
   const r = await ocrWorker.recognize(img);
   return (r.data && r.data.text) || "";
@@ -305,7 +310,7 @@ window.erzeugen = () => {
   const s = stoff(); if (!pend.length) return;
   const nK = +$("#gk").value, nQ = +$("#gq").value; let addK = 0, addQ = 0, offen = 0; const hin = [];
   for (const p of pend){
-    const res = StoffGen.erzeugen(p.text, {nK, nQ, name: s.name});
+    const res = StoffGen.erzeugen(p.text, {nK, nQ, lang: sprache()});
     const id = uid(); s.quellen.push({id, name: p.name, zeichen: p.text.length, text: p.text.slice(0, 200000)});
     for (const k of res.karten){ const kid = hid("k", k.f); if (s.karten.some(x => x.id === kid)) continue; s.karten.push({id: kid, f: k.f, a: k.a, t: k.t || "", art: k.art, src: id}); addK++; }
     for (const q of res.mc){ const qid = hid("q", q.f); if (s.mc.some(x => x.id === qid)) continue; s.mc.push({id: qid, f: q.f, o: q.o, r: q.r || [], e: q.e || "", t: q.t || "", art: q.art, src: id}); addQ++; if (!q.r || !q.r.length) offen++; }
@@ -504,6 +509,7 @@ V.hilfe = () => app(`<button class="btn sm" onclick="go('mehr')">← Mehr</butto
   <p><b>Fragen erzeugen.</b> Die App sucht im Text zuerst nach vorhandenen Prüfungsfragen (Frage mit Antwortmöglichkeiten a/b/c, Kästchen, Lösungsangabe) und übernimmt sie. Aus Fließtext baut sie Definitionsfragen („Was ist …?“), Aufzählungen („Nenne alle …“), Lückentexte und Zahlenfragen; falsche Antwortmöglichkeiten kommen aus demselben Text. Überschriften werden zu Themen.</p>
   <p><b>Editor.</b> Weil Regeln keinen Verstand haben, lohnt der Blick in den Editor: unpassende Fragen löschen, Texte glätten, bei Prüfungsfragen ohne Lösungsangabe die richtige Antwort ankreuzen. Fragen ohne Kreuz werden nicht abgefragt.</p>
   <p><b>Lernen.</b> Karten folgen dem SM-2-Verfahren: nach jeder Bewertung rückt die nächste Wiederholung weiter in die Zukunft, bei „Nochmal“ kommt die Karte in 10 Minuten wieder. Fragen wandern bei Fehlern in die Fehlerliste und verlassen sie nach zwei richtigen Antworten in Folge. Die Simulation mischt Fragen über alle Themen und wertet erst am Ende aus.</p>
+  <p><b>Sprache.</b> Je Stoff wählbar (Deutsch oder Englisch, beim Anlegen oder unter Stoff → Stoff verwalten). Sie bestimmt, welches Sprachpaket die Texterkennung nutzt und nach welchen Mustern Fragen gebaut werden. Die Bedienung der App bleibt deutsch.</p>
   <p><b>Fotos.</b> Gut ausgeleuchtet, gerade, scharf, eine Seite je Foto. Die Texterkennung braucht beim ersten Mal einige Sekunden zum Vorbereiten und je Seite etwa 5–20 Sekunden.</p></div>`);
 V.stat = () => {
   const s = stoff(), l = L();
@@ -527,14 +533,14 @@ V.daten = () => app(`<h2>Daten</h2>
   <div class="row"><button class="btn" onclick="exportAll()">Alles exportieren</button><label class="btn" for="impA">Sicherung importieren …</label><input type="file" id="impA" accept="application/json,.json" hidden onchange="importAll(this.files[0])"></div></div>`);
 function saveFile(fn, json){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([json], {type:"application/json"})); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9äöüß]+/g,"-").replace(/^-|-$/g,"").slice(0,40) || "stoff";
-window.exportStoff = () => { const s = stoff(); if (!s) return; saveFile("stofftrainer-" + slug(s.name) + ".json", JSON.stringify({stofftrainer:1, name:s.name, karten:s.karten.map(({f,a,t})=>({t,f,a})), mc:s.mc.map(({f,o,r,e,t})=>({t,f,o,r,e}))}, null, 1)); };
+window.exportStoff = () => { const s = stoff(); if (!s) return; saveFile("stofftrainer-" + slug(s.name) + ".json", JSON.stringify({stofftrainer:1, name:s.name, sprache:s.sprache||"de", karten:s.karten.map(({f,a,t})=>({t,f,a})), mc:s.mc.map(({f,o,r,e,t})=>({t,f,o,r,e}))}, null, 1)); };
 window.exportAll = () => saveFile("stofftrainer-sicherung-" + new Date().toISOString().slice(0,10) + ".json", JSON.stringify(S, null, 1));
 function readJson(f, cb){ if (!f) return; const r = new FileReader(); r.onload = () => { try { cb(JSON.parse(r.result)); } catch(e){ toast("Datei ist kein gültiges JSON."); } }; r.readAsText(f); }
 window.importPaket = f => readJson(f, j => {
   if (!j || (!Array.isArray(j.karten) && !Array.isArray(j.mc))){ toast("Kein Fragenpaket."); return; }
   const name = String(j.name || "Importiert").slice(0,60);
   let s = Object.values(S.stoffe).find(x => x.name === name);
-  if (!s){ const id = uid(); s = S.stoffe[id] = {id, name, erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; }
+  if (!s){ const id = uid(); s = S.stoffe[id] = {id, name, sprache: j.sprache === "en" ? "en" : "de", erstellt:Date.now(), quellen:[], karten:[], mc:[], lern:freshLern()}; }
   const src = uid(); s.quellen.push({id:src, name:"Import " + (f.name||""), zeichen:0});
   let nk = 0, nq = 0;
   for (const k of j.karten || []){ if (!k || !k.f || !k.a) continue; const id = hid("k", k.f); if (s.karten.some(x=>x.id===id)) continue; s.karten.push({id, f:String(k.f), a:String(k.a), t:String(k.t||""), art:"import", src}); nk++; }
